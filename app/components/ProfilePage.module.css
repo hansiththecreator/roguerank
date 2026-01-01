@@ -1,0 +1,48 @@
+.profileWrapper {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #e6eef8;
+}
+
+.profileHeader {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.profilePic {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 12px;
+  border: 2px solid #0ea5e9;
+}
+
+.username {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.userId {
+  color: #9aa6c2;
+  font-size: 0.9rem;
+}
+
+.sectionTitle {
+  margin-top: 20px;
+  font-size: 1.2rem;
+}
+
+.pollList {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pollCard {
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 10px;
+}

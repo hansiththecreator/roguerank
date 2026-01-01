@@ -1,0 +1,204 @@
+.pollContainer {
+  text-align: center;
+  padding: 20px;
+  color: #e6eef8;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pollTitle {
+  font-size: 1.25rem;
+}
+
+.closeButton {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #e6eef8;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.instruction {
+  margin-top: 10px;
+  color: #9aa6c2;
+  font-size: 0.95rem;
+}
+
+.optionsContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 28px;
+  margin-top: 16px;
+}
+
+.orText {
+  font-weight: 700;
+  color: #9aa6c2;
+}
+
+.optionCard {
+  transition: 0.12s;
+}
+
+.optionCard:hover {
+  transform: translateY(-6px);
+}
+
+.voteArea {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.optionImg {
+  width: 180px;
+  height: 160px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #2d3748;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+}
+
+.optionImgPlaceholder {
+  width: 180px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #2d3748;
+  font-size: 36px;
+}
+
+.optionText {
+  margin-top: 10px;
+  font-weight: 600;
+  color: #fbfbfc;
+}
+
+.rankingTitleHeader {
+  margin-top: 22px;
+}
+
+.rankingList {
+  list-style: none;
+  padding: 0;
+  max-width: 640px;
+  margin: 12px auto;
+}
+
+.rankingItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.02);
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.rankingIndex {
+  width: 28px;
+  height: 28px;
+  background: #c7e9ff;
+  color: #071127;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border-radius: 6px;
+}
+
+.rankingThumb {
+  width: 44px;
+  height: 44px;
+}
+
+.rankingImg {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.rankingPlaceholder {
+  width: 44px;
+  height: 44px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.rankingMeta {
+  text-align: left;
+}
+
+.rankingName {
+  font-weight: 700;
+}
+
+.rankingSub {
+  font-size: 12px;
+  color: #9aa6c2;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: #071127;
+  padding: 24px;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 420px;
+}
+
+.modalSub {
+  color: #9aa6c2;
+  margin-bottom: 10px;
+}
+
+.modalRanking {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.modalRanking li {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.modalActions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modalActions button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}

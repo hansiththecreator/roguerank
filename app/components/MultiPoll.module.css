@@ -1,0 +1,6 @@
+.pollContainer { text-align: center; padding: 8px; color: #e6eef8; }
+.sectionHeading { margin-top: 18px; margin-bottom: 8px; font-size: 1.25rem; }
+.cardGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+.pollCard { background: #071127; padding: 14px; border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.6); }
+.cardButton { background: #0ea5e9; color: #042028; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.cardButtonAlt { background: transparent; color: #9AA6C2; border: 1px solid #1f2b3b; padding: 8px 10px; border-radius: 8px; cursor: pointer; }

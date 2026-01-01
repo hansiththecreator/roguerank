@@ -1,0 +1,11 @@
+.searchWrap { flex: 1; max-width: 640px; }
+.searchInput {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+  font-size: 14px;
+  background: white;
+  color: #061219;
+}
