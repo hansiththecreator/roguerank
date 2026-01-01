@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateElo } from '@/lib/elo';
+import { updateElo } from "../../../../utils/elo";
 
 export async function POST(request, { params }) {
   const { optionA, optionB, winner } = await request.json();
