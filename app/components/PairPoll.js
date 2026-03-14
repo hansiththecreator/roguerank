@@ -2,12 +2,16 @@
 import { useEffect, useState } from "react";
 import styles from "./PairPoll.module.css";
 import { updateElo } from "../utils/elo";
+import { supabase } from "../lib/supabaseClient";
 
 export default function PairPoll({ poll, onBack, onUpdate }) {
-  const [options, setOptions] = useState((poll?.options || []).map(o => ({ ...o })));
+  const [options, setOptions] = useState(
+    (poll?.options || []).map(o => ({ ...o }))
+  );
   const [pair, setPair] = useState([]);
   const [sessionVotes, setSessionVotes] = useState(0);
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
     setOptions((poll?.options || []).map(o => ({ ...o })));
@@ -29,7 +33,9 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
     setPair([options[idxA], options[idxB]]);
   }
 
-  function handleVote(winnerId, loserId) {
+  if (isVoting) return;
+setIsVoting(true);
+  async function handleVote(winnerId, loserId) {
     const winner = options.find(o => o.id === winnerId);
     const loser = options.find(o => o.id === loserId);
     if (!winner || !loser) return;
@@ -38,7 +44,8 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
     const lRating = loser.rating ?? 1000;
     const [newW, newL] = updateElo(wRating, lRating, 24);
 
-    const updated = options.map(o => {
+    // ---------- OPTIMISTIC UI UPDATE ----------
+    const updatedOptions = options.map(o => {
       if (o.id === winnerId) {
         return { ...o, rating: newW, votes: (o.votes || 0) + 1 };
       }
@@ -48,7 +55,7 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
       return o;
     });
 
-    setOptions(updated);
+    setOptions(updatedOptions);
 
     setSessionVotes(v => {
       const next = v + 1;
@@ -56,21 +63,46 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
       return next;
     });
 
-    const updatedPoll = { ...poll, options: updated };
-
-    try {
-      const raw = localStorage.getItem("rankr_polls");
-      let list = raw ? JSON.parse(raw) : [];
-      const idx = list.findIndex(p => p.id === poll.id);
-      if (idx >= 0) list[idx] = updatedPoll;
-      else list.unshift(updatedPoll);
-      localStorage.setItem("rankr_polls", JSON.stringify(list));
-    } catch (e) {
-      console.error(e);
-    }
-
+    const updatedPoll = { ...poll, options: updatedOptions };
     onUpdate?.(updatedPoll);
+
     pickPair();
+
+    // ---------- SUPABASE WRITE (IMMEDIATE) ----------
+try {
+  await Promise.all([
+    
+    // update winner
+    supabase
+      .from("poll_options")
+      .update({
+        rating: newW,
+        votes: (winner.votes || 0) + 1,
+      })
+      .eq("id", winnerId),
+
+    // update loser
+    supabase
+      .from("poll_options")
+      .update({
+        rating: newL,
+      })
+      .eq("id", loserId),
+
+    // update poll total votes
+    supabase
+      .from("polls")
+      .update({
+        total_votes: (poll.total_votes || 0) + 1
+      })
+      .eq("id", poll.id)
+
+  ]);
+} catch (err) {
+  console.error("Vote write failed:", err);
+}
+
+setIsVoting(false);
   }
 
   const sorted = [...options].sort(
@@ -86,9 +118,9 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
         </button>
       </div>
 
-      {/* ✅ ADDED: creator display (NO LOGIC TOUCHED) */}
       <div style={{ fontSize: 13, color: "#9AA6C2", marginTop: 2 }}>
-        Created by <strong style={{ color: "#e6eef8" }}>{poll.creator}</strong>
+        Created by{" "}
+        <strong style={{ color: "#e6eef8" }}>{poll.creator}</strong>
       </div>
 
       <p className={styles.instruction}>Select your choice</p>
@@ -97,15 +129,22 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
         <div className={styles.optionsContainer}>
           <div className={styles.optionCard}>
             <button
-              className={styles.voteArea}
-              onClick={() => handleVote(pair[0].id, pair[1].id)}
+            disabled={isVoting}
+            className={styles.voteArea}
+            onClick={() => handleVote(pair[0].id, pair[1].id)}
             >
               {pair[0].image ? (
-                <img src={pair[0].image} alt={pair[0].text} className={styles.optionImg} />
+                <img
+                  src={pair[0].image}
+                  alt={pair[0].text}
+                  className={styles.optionImg}
+                />
               ) : (
                 <div className={styles.optionImgPlaceholder}>⭐</div>
               )}
-              <div className={styles.optionText}>{pair[0].text || "Unnamed"}</div>
+              <div className={styles.optionText}>
+                {pair[0].text || "Unnamed"}
+              </div>
             </button>
           </div>
 
@@ -117,11 +156,17 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
               onClick={() => handleVote(pair[1].id, pair[0].id)}
             >
               {pair[1].image ? (
-                <img src={pair[1].image} alt={pair[1].text} className={styles.optionImg} />
+                <img
+                  src={pair[1].image}
+                  alt={pair[1].text}
+                  className={styles.optionImg}
+                />
               ) : (
                 <div className={styles.optionImgPlaceholder}>⭐</div>
               )}
-              <div className={styles.optionText}>{pair[1].text || "Unnamed"}</div>
+              <div className={styles.optionText}>
+                {pair[1].text || "Unnamed"}
+              </div>
             </button>
           </div>
         </div>
@@ -140,14 +185,20 @@ export default function PairPoll({ poll, onBack, onUpdate }) {
 
             <div className={styles.rankingThumb}>
               {o.image ? (
-                <img src={o.image} alt={o.text} className={styles.rankingImg} />
+                <img
+                  src={o.image}
+                  alt={o.text}
+                  className={styles.rankingImg}
+                />
               ) : (
                 <div className={styles.rankingPlaceholder}>⭐</div>
               )}
             </div>
 
             <div className={styles.rankingMeta}>
-              <div className={styles.rankingName}>{o.text || "Unnamed"}</div>
+              <div className={styles.rankingName}>
+                {o.text || "Unnamed"}
+              </div>
               <div className={styles.rankingSub}>
                 {Math.round(o.rating || 0)} points · {o.votes || 0} votes
               </div>

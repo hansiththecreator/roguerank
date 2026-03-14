@@ -5,14 +5,7 @@ import PairPoll from "./PairPoll";
 import PollCreator from "./PollCreator";
 import Header from "./Header";
 import { polls as seedPolls } from "../data/polls";
-
-function loadPollsFromStorage() {
-  try {
-    const raw = localStorage.getItem("rankr_polls");
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return null;
-}
+import { supabase } from "../lib/supabaseClient";
 
 export default function MultiPoll() {
   const [polls, setPolls] = useState([]);
@@ -25,125 +18,115 @@ export default function MultiPoll() {
 
   // ---------- USER INIT ----------
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     const saved = localStorage.getItem("rankr_user");
     if (saved) {
-      const parsed = JSON.parse(saved);
-      setCurrentUser({
-        ...parsed,
-        likes: parsed.likes || [],
-        saved: parsed.saved || [],
-      });
+      setCurrentUser(JSON.parse(saved));
     } else {
       const guest = {
         id: `guest-${Math.random().toString(36).slice(2, 10)}`,
         username: "Guest",
         likes: [],
-        saved: [],
       };
       localStorage.setItem("rankr_user", JSON.stringify(guest));
       setCurrentUser(guest);
     }
   }, []);
 
-  // ---------- LOAD + MIGRATE POLLS ----------
+  // ---------- LOAD POLLS ----------
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    async function loadPolls() {
+      const { data } = await supabase
+        .from("polls")
+        .select(`*, poll_options(*)`)
+        .order("created_at", { ascending: false });
 
-    const stored = loadPollsFromStorage();
-    let loadedPolls = [];
+      if (data?.length) {
+        setPolls(
+          data.map((p) => ({
+            id: p.id,
+            title: p.title,
+            creator: p.creator,
+            creatorId: p.creator_id,
+            likes: p.likes,
+            createdAt: p.created_at,
+            options: p.poll_options || [],
+          }))
+        );
+        return;
+      }
 
-    if (stored?.length) {
-      // 🔥 LEGACY MIGRATION
-      loadedPolls = stored.map((p) => {
-        if (!p.creatorId) {
-          return {
-            ...p,
-            creator: p.creator || "Legacy",
-            creatorId: "legacy",
-          };
+      // ---------- SEED ONCE ----------
+      for (const s of seedPolls) {
+        const { error } = await supabase.from("polls").insert({
+          id: s.id,
+          title: s.title,
+          creator: s.creator ?? "Admin",
+          creator_id: s.creatorId ?? "admin",
+          likes: s.likes ?? 0,
+        });
+        if (error) console.error(error);
+
+        for (const o of s.options) {
+          await supabase.from("poll_options").insert({
+            id: o.id,
+            poll_id: s.id,
+            text: o.text,
+            image: o.image ?? null,
+            rating: o.rating ?? 1000,
+            votes: o.votes ?? 0,
+          });
         }
-        return p;
-      });
+      }
 
-      localStorage.setItem("rankr_polls", JSON.stringify(loadedPolls));
-      setPolls(loadedPolls);
-    } else {
-      const now = Date.now();
-      const normalizedSeed = (seedPolls || []).map((s, idx) => ({
-        ...s,
-        id: s.id || `seed-${now}-${idx}`,
-        options: (s.options || []).map((o, i) => ({
-          id: o.id || `opt-${now}-${idx}-${i}`,
-          text: o.text || "",
-          image: o.image ?? null,
-          rating: o.rating ?? 1000,
-          votes: o.votes ?? 0,
-        })),
-        creator: s.creator ?? "Admin",
-        creatorId: s.creatorId ?? "admin",
-        likes: s.likes ?? 0,
-        createdAt: s.createdAt ?? now,
-      }));
-
-      setPolls(normalizedSeed);
-      localStorage.setItem("rankr_polls", JSON.stringify(normalizedSeed));
+      loadPolls(); // reload after seed
     }
+
+    loadPolls();
   }, []);
 
   // ---------- LIKE ----------
-  const handleLikeToggle = (pollId) => {
-    if (!currentUser) return;
+  const handleLikeToggle = async (pollId) => {
+    const poll = polls.find((p) => p.id === pollId);
+    if (!poll || !currentUser) return;
 
-    const alreadyLiked = currentUser.likes.includes(pollId);
+    const liked = currentUser.likes.includes(pollId);
+    const newLikes = liked ? poll.likes - 1 : poll.likes + 1;
 
-    const updatedUser = {
-      ...currentUser,
-      likes: alreadyLiked
-        ? currentUser.likes.filter((id) => id !== pollId)
-        : [...currentUser.likes, pollId],
-    };
+    await supabase.from("polls").update({ likes: newLikes }).eq("id", pollId);
 
-    setCurrentUser(updatedUser);
-    localStorage.setItem("rankr_user", JSON.stringify(updatedUser));
+    setCurrentUser((u) => {
+      const updated = {
+        ...u,
+        likes: liked
+          ? u.likes.filter((id) => id !== pollId)
+          : [...u.likes, pollId],
+      };
+      localStorage.setItem("rankr_user", JSON.stringify(updated));
+      return updated;
+    });
 
     setPolls((prev) =>
       prev.map((p) =>
-        p.id === pollId
-          ? {
-              ...p,
-              liked: !alreadyLiked,
-              likes: alreadyLiked
-                ? Math.max((p.likes || 1) - 1, 0)
-                : (p.likes || 0) + 1,
-            }
-          : p
+        p.id === pollId ? { ...p, likes: newLikes } : p
       )
     );
   };
 
   // ---------- DELETE ----------
-  const handleDelete = (pollId) => {
+  const handleDelete = async (pollId) => {
     if (!confirm("Delete this poll?")) return;
 
-    const updated = polls.filter((p) => p.id !== pollId);
-    setPolls(updated);
-    localStorage.setItem("rankr_polls", JSON.stringify(updated));
+    await supabase.from("poll_options").delete().eq("poll_id", pollId);
+    await supabase.from("polls").delete().eq("id", pollId);
 
+    setPolls((p) => p.filter((x) => x.id !== pollId));
     setMenuOpenFor(null);
-    if (editingPoll?.id === pollId) setEditingPoll(null);
+    setEditingPoll(null);
   };
 
-  // ---------- FILTER ----------
-  const visiblePolls = polls.filter((p) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      p.title.toLowerCase().includes(q) ||
-      p.options?.some((o) => o.text.toLowerCase().includes(q))
-    );
-  });
+  const visiblePolls = polls.filter((p) =>
+    p.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div>
@@ -157,115 +140,59 @@ export default function MultiPoll() {
         setSelectedPoll={setSelectedPoll}
       />
 
-      <p style={{ textAlign: "center", marginTop: 6, color: "#9AA6C2" }}>
-        Rogue Rank is social ranking — swipe pairwise, let the people decide.
-      </p>
-
       {!selectedPoll && !showCreator && !editingPoll && (
-        <section style={{ marginTop: 20 }}>
-          <h2 className={styles.sectionHeading}>Trending polls</h2>
-          <div className={styles.cardGrid}>
-            {visiblePolls.map((poll) => {
-              const totalVotes = poll.options.reduce(
-                (a, b) => a + (b.votes || 0),
-                0
-              );
+        <section className={styles.cardGrid}>
+          {visiblePolls.map((poll) => {
+            const canManage = currentUser?.id === poll.creatorId;
 
-              const canManage =
-                currentUser?.id === poll.creatorId ||
-                poll.creatorId === "legacy";
+            return (
+              <div key={poll.id} className={styles.pollCard}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{poll.title}</strong>
 
-              return (
-                <div className={styles.pollCard} key={poll.id}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <strong>{poll.title}</strong>
+                  {canManage && (
+                    <div style={{ position: "relative" }}>
+                      <button
+                        onClick={() =>
+                          setMenuOpenFor(menuOpenFor === poll.id ? null : poll.id)
+                        }
+                        style={{ background: "none", border: "none" }}
+                      >
+                        ⋮
+                      </button>
 
-                    {canManage && (
-                      <div style={{ position: "relative" }}>
-                        <button
-                          onClick={() =>
-                            setMenuOpenFor(
-                              menuOpenFor === poll.id ? null : poll.id
-                            )
-                          }
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "#9AA6C2",
-                            cursor: "pointer",
-                            fontSize: 18,
-                          }}
-                        >
-                          ⋮
-                        </button>
-
-                        {menuOpenFor === poll.id && (
-                          <div
-                            style={{
-                              position: "absolute",
-                              right: 0,
-                              top: 22,
-                              background: "#0f172a",
-                              border: "1px solid #1f2b3b",
-                              borderRadius: 8,
-                              zIndex: 10,
-                              minWidth: 120,
-                            }}
+                      {menuOpenFor === poll.id && (
+                        <div className={styles.menu}>
+                          <button onClick={() => setEditingPoll(poll)}>
+                            Edit poll
+                          </button>
+                          <button
+                            style={{ color: "red" }}
+                            onClick={() => handleDelete(poll.id)}
                           >
-                            <button
-                              onClick={() => {
-                                setEditingPoll(poll);
-                                setMenuOpenFor(null);
-                              }}
-                              style={menuBtn}
-                            >
-                              Edit poll
-                            </button>
-                            <button
-                              onClick={() => handleDelete(poll.id)}
-                              style={{ ...menuBtn, color: "#ef4444" }}
-                            >
-                              Delete poll
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ fontSize: 12, color: "#9AA6C2", marginTop: 2 }}>
-                    by{" "}
-                    <strong style={{ color: "#e6eef8" }}>
-                      {poll.creator}
-                    </strong>
-                  </div>
-
-                  <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                    <button
-                      className={styles.cardButton}
-                      onClick={() => setSelectedPoll(poll)}
-                    >
-                      Vote / View
-                    </button>
-
-                    <button
-                      className={styles.cardButtonAlt}
-                      onClick={() => handleLikeToggle(poll.id)}
-                    >
-                      <span style={{ color: poll.liked ? "red" : "#9AA6C2" }}>
-                        {poll.liked ? "♥︎" : "♡"}
-                      </span>{" "}
-                      {poll.likes || 0}
-                    </button>
-
-                    <div style={{ marginLeft: "auto", color: "#9AA6C2" }}>
-                      {totalVotes} votes
+                            Delete poll
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
+
+                <div style={{ fontSize: 12, color: "#9AA6C2" }}>
+                  by <strong>{poll.creator}</strong>
+                </div>
+
+                <div className={styles.actions}>
+                  <button onClick={() => setSelectedPoll(poll)}>
+                    Vote / View
+                  </button>
+                  <button onClick={() => handleLikeToggle(poll.id)}>
+                    ♥ {poll.likes}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </section>
       )}
 
@@ -278,14 +205,17 @@ export default function MultiPoll() {
             setShowCreator(false);
             setEditingPoll(null);
           }}
-          onCreate={(poll) => {
-            setPolls((prev) =>
-              editingPoll
-                ? prev.map((p) => (p.id === poll.id ? poll : p))
-                : [poll, ...prev]
-            );
+          onCreate={async (poll) => {
+            await supabase.from("polls").upsert({
+              id: poll.id,
+              title: poll.title,
+              creator: poll.creator,
+              creator_id: poll.creatorId,
+              likes: poll.likes,
+            });
             setShowCreator(false);
             setEditingPoll(null);
+            location.reload();
           }}
         />
       )}
@@ -295,20 +225,10 @@ export default function MultiPoll() {
           poll={selectedPoll}
           onBack={() => setSelectedPoll(null)}
           onUpdate={(u) =>
-            setPolls((prev) => prev.map((p) => (p.id === u.id ? u : p)))
+            setPolls((p) => p.map((x) => (x.id === u.id ? u : x)))
           }
         />
       )}
     </div>
   );
 }
-
-const menuBtn = {
-  width: "100%",
-  padding: "8px 10px",
-  background: "transparent",
-  border: "none",
-  textAlign: "left",
-  cursor: "pointer",
-  color: "#e6eef8",
-};

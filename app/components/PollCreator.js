@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import styles from "./PollCreator.module.css";
+import { supabase } from "../lib/supabaseClient";
 
 const makeEmptyOption = (seed = 0) => ({
   text: "",
@@ -20,12 +21,14 @@ export default function PollCreator({
   const [title, setTitle] = useState(poll?.title || "");
   const [options, setOptions] = useState(
     poll?.options?.length
-      ? poll.options.map((o, i) => ({ ...o, id: o.id || `opt-${Date.now()}-${i}` }))
+      ? poll.options.map((o, i) => ({
+          ...o,
+          id: o.id || `opt-${Date.now()}-${i}`,
+        }))
       : Array.from({ length: 5 }, (_, i) => makeEmptyOption(i))
   );
-  const [hashtags, setHashtags] = useState(
-    poll?.hashtags?.join(", ") || ""
-  );
+  const [hashtags, setHashtags] = useState(poll?.hashtags?.join(", ") || "");
+  const [loading, setLoading] = useState(false);
 
   // ---------- IMAGE UPLOAD ----------
   const handleImageUpload = (index, e) => {
@@ -55,26 +58,24 @@ export default function PollCreator({
   };
 
   // ---------- CREATE / SAVE ----------
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) return alert("Enter a title!");
 
-    const validCount = options.filter((o) => o.text.trim()).length;
-    if (validCount < 5)
+    const validOptions = options.filter((o) => o.text.trim());
+    if (validOptions.length < 5)
       return alert("Enter at least 5 valid options!");
 
     const updatedPoll = {
       ...(poll || {}),
       id: poll?.id || `poll-${Date.now()}`,
       title: title.trim(),
-      options: options
-        .filter((o) => o.text.trim())
-        .map((o, i) => ({
-          id: o.id || `opt-${Date.now()}-${i}`,
-          text: o.text.trim(),
-          image: o.image || null,
-          rating: o.rating ?? 1000,
-          votes: o.votes ?? 0,
-        })),
+      options: validOptions.map((o, i) => ({
+        id: o.id || `opt-${Date.now()}-${i}`,
+        text: o.text.trim(),
+        image: o.image || null,
+        rating: o.rating ?? 1000,
+        votes: o.votes ?? 0,
+      })),
       hashtags: hashtags
         .split(",")
         .map((h) => h.trim())
@@ -85,7 +86,32 @@ export default function PollCreator({
       createdAt: poll?.createdAt ?? Date.now(),
     };
 
-    onCreate(updatedPoll);
+    setLoading(true);
+
+    try {
+      if (mode === "edit") {
+        const { error } = await supabase
+          .from("polls")
+          .update(updatedPoll)
+          .eq("id", updatedPoll.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("polls")
+          .insert(updatedPoll);
+
+        if (error) throw error;
+      }
+
+      // keep existing flow alive
+      onCreate(updatedPoll);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save poll. Check console.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -167,11 +193,13 @@ export default function PollCreator({
       <div className={styles.actions}>
         <button
           onClick={handleSubmit}
-          disabled={
-            options.filter((o) => o.text.trim()).length < 5 || !title.trim()
-          }
+          disabled={loading}
         >
-          {mode === "edit" ? "Save Changes" : "Create Poll"}
+          {loading
+            ? "Saving..."
+            : mode === "edit"
+            ? "Save Changes"
+            : "Create Poll"}
         </button>
 
         <button onClick={onCancel} className={styles.cancelBtn}>
