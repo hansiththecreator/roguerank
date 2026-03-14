@@ -205,18 +205,32 @@ export default function MultiPoll() {
             setShowCreator(false);
             setEditingPoll(null);
           }}
-          onCreate={async (poll) => {
-            await supabase.from("polls").upsert({
-              id: poll.id,
-              title: poll.title,
-              creator: poll.creator,
-              creator_id: poll.creatorId,
-              likes: poll.likes,
-            });
-            setShowCreator(false);
-            setEditingPoll(null);
-            location.reload();
-          }}
+onCreate={async (poll) => {
+  // insert poll
+  await supabase.from("polls").upsert({
+    id: poll.id,
+    title: poll.title,
+    creator: poll.creator,
+    creator_id: poll.creatorId,
+    likes: poll.likes,
+  });
+
+  // insert options
+  for (const option of poll.options) {
+    await supabase.from("poll_options").insert({
+      id: option.id,
+      poll_id: poll.id,
+      text: option.text,
+      image: option.image ?? null,
+      rating: option.rating ?? 1000,
+      votes: option.votes ?? 0,
+    });
+  }
+
+  setShowCreator(false);
+  setEditingPoll(null);
+  location.reload();
+}}
         />
       )}
 
