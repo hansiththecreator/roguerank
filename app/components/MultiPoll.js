@@ -4,7 +4,7 @@ import styles from "./MultiPoll.module.css";
 import PairPoll from "./PairPoll";
 import PollCreator from "./PollCreator";
 import Header from "./Header";
-import { polls as seedPolls } from "../../data/polls";
+
 import { supabase } from "../lib/supabaseClient";
 
 export default function MultiPoll() {
@@ -32,57 +32,37 @@ export default function MultiPoll() {
     }
   }, []);
 
-  // ---------- LOAD POLLS ----------
-  useEffect(() => {
-    async function loadPolls() {
-      const { data } = await supabase
-        .from("polls")
-        .select(`*, poll_options(*)`)
-        .order("created_at", { ascending: false });
+// ---------- LOAD POLLS ----------
+useEffect(() => {
+  async function loadPolls() {
+    const { data, error } = await supabase
+      .from("polls")
+      .select(`*, poll_options(*)`)
+      .order("createdate", { ascending: false });
 
-      if (data?.length) {
-        setPolls(
-          data.map((p) => ({
-            id: p.id,
-            title: p.title,
-            creator: p.creator,
-            creatorId: p.creator_id,
-            likes: p.likes,
-            createdAt: p.created_at,
-            options: p.poll_options || [],
-          }))
-        );
-        return;
-      }
-
-      // ---------- SEED ONCE ----------
-      for (const s of seedPolls) {
-        const { error } = await supabase.from("polls").insert({
-          id: s.id,
-          title: s.title,
-          creator: s.creator ?? "Admin",
-          creator_id: s.creatorId ?? "admin",
-          likes: s.likes ?? 0,
-        });
-        if (error) console.error(error);
-
-        for (const o of s.options) {
-          await supabase.from("poll_options").insert({
-            id: o.id,
-            poll_id: s.id,
-            text: o.text,
-            image: o.image ?? null,
-            rating: o.rating ?? 1000,
-            votes: o.votes ?? 0,
-          });
-        }
-      }
-
-      loadPolls(); // reload after seed
+    if (error) {
+      console.error("Error loading polls:", error);
+      return;
     }
 
-    loadPolls();
-  }, []);
+    if (!data) return;
+
+    setPolls(
+      data.map((p) => ({
+        id: p.id,
+        title: p.title,
+        creator: p.creator,
+        creatorId: p.creator_id,
+        likes: p.likes,
+        createdAt: p.createdate,
+        options: p.poll_options || [],
+      }))
+    );
+  }
+
+  loadPolls();
+}, []);
+
 
   // ---------- LIKE ----------
   const handleLikeToggle = async (pollId) => {
