@@ -4,7 +4,7 @@ import styles from "./MultiPoll.module.css";
 import PairPoll from "./PairPoll";
 import PollCreator from "./PollCreator";
 import Header from "./Header";
-import { polls as seedPolls } from "../data/polls";
+import { polls as seedPolls } from "../../data/polls";
 import { supabase } from "../lib/supabaseClient";
 
 export default function MultiPoll() {
