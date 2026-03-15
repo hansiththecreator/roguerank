@@ -186,18 +186,27 @@ useEffect(() => {
             setEditingPoll(null);
           }}
 onCreate={async (poll) => {
-  // insert poll
-  await supabase.from("polls").upsert({
-    id: poll.id,
-    title: poll.title,
-    creator: poll.creator,
-    creator_id: poll.creatorId,
-    likes: poll.likes,
-  });
+  const { error: pollError } = await supabase
+    .from("polls")
+    .upsert({
+      id: poll.id,
+      title: poll.title,
+      creator: poll.creator,
+      creator_id: poll.creatorId,
+      likes: poll.likes,
+    });
+
+  if (pollError) {
+    console.error("Poll insert failed:", pollError);
+    alert("Poll insert failed. Check console.");
+    return;
+  }
 
   // insert options
-  for (const option of poll.options) {
-    await supabase.from("poll_options").insert({
+for (const option of poll.options) {
+  const { error: optionError } = await supabase
+    .from("poll_options")
+    .insert({
       id: option.id,
       poll_id: poll.id,
       text: option.text,
@@ -205,7 +214,11 @@ onCreate={async (poll) => {
       rating: option.rating ?? 1000,
       votes: option.votes ?? 0,
     });
+
+  if (optionError) {
+    console.error("Option insert failed:", optionError);
   }
+}
 
   setShowCreator(false);
   setEditingPoll(null);
