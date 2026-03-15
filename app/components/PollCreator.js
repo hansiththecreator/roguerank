@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import styles from "./PollCreator.module.css";
-import { supabase } from "../lib/supabaseClient";
 
 const makeEmptyOption = (seed = 0) => ({
   text: "",
@@ -45,12 +44,13 @@ export default function PollCreator({
     reader.readAsDataURL(file);
   };
 
-  // ---------- ADD / REMOVE OPTIONS ----------
+  // ---------- ADD OPTION ----------
   const addOption = () => {
     if (options.length >= 199) return alert("Maximum 199 options allowed.");
     setOptions((s) => [...s, makeEmptyOption(s.length)]);
   };
 
+  // ---------- REMOVE OPTION ----------
   const removeOption = (index) => {
     if (options.length <= 5)
       return alert("You must keep at least 5 options!");
@@ -89,26 +89,10 @@ export default function PollCreator({
     setLoading(true);
 
     try {
-      if (mode === "edit") {
-        const { error } = await supabase
-          .from("polls")
-          .update(updatedPoll)
-          .eq("id", updatedPoll.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("polls")
-          .insert(updatedPoll);
-
-        if (error) throw error;
-      }
-
-      // keep existing flow alive
       onCreate(updatedPoll);
     } catch (err) {
       console.error(err);
-      alert("Failed to save poll. Check console.");
+      alert("Failed to create poll.");
     } finally {
       setLoading(false);
     }
@@ -118,7 +102,7 @@ export default function PollCreator({
     <div className={styles.creator}>
       <h2>{mode === "edit" ? "Edit Poll" : "Create a Poll"}</h2>
 
-      {/* ---------- TITLE ---------- */}
+      {/* TITLE */}
       <label>Title</label>
       <input
         className={styles.input}
@@ -127,7 +111,7 @@ export default function PollCreator({
         placeholder="Who's the GOAT?"
       />
 
-      {/* ---------- OPTIONS ---------- */}
+      {/* OPTIONS */}
       <label>Options</label>
       {options.map((opt, index) => (
         <div key={opt.id} className={styles.optionRow}>
@@ -137,9 +121,7 @@ export default function PollCreator({
             onChange={(e) => {
               const v = e.target.value;
               setOptions((prev) =>
-                prev.map((o, i) =>
-                  i === index ? { ...o, text: v } : o
-                )
+                prev.map((o, i) => (i === index ? { ...o, text: v } : o))
               );
             }}
             placeholder={`Option ${index + 1}`}
@@ -180,7 +162,7 @@ export default function PollCreator({
         + Add Option
       </button>
 
-      {/* ---------- HASHTAGS ---------- */}
+      {/* HASHTAGS */}
       <label>Hashtags (comma-separated)</label>
       <input
         className={styles.input}
@@ -189,12 +171,9 @@ export default function PollCreator({
         placeholder="football, legends"
       />
 
-      {/* ---------- ACTIONS ---------- */}
+      {/* ACTIONS */}
       <div className={styles.actions}>
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-        >
+        <button onClick={handleSubmit} disabled={loading}>
           {loading
             ? "Saving..."
             : mode === "edit"
@@ -207,7 +186,7 @@ export default function PollCreator({
         </button>
       </div>
 
-      {/* ⚠️ CONTENT GUIDELINE NOTICE */}
+      {/* NOTICE */}
       <p
         style={{
           marginTop: 10,
