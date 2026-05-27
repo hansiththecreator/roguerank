@@ -1,6 +1,220 @@
-.pollContainer { text-align: center; padding: 8px; color: #e6eef8; }
-.sectionHeading { margin-top: 18px; margin-bottom: 8px; font-size: 1.25rem; }
-.cardGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
-.pollCard { background: #071127; padding: 14px; border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.6); }
-.cardButton { background: #0ea5e9; color: #042028; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-.cardButtonAlt { background: transparent; color: #9AA6C2; border: 1px solid #1f2b3b; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.pollContainer {
+  color: #e6eef8;
+  padding: 10px 0 32px;
+}
+
+.feedHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0 14px;
+}
+
+.sectionHeading {
+  margin: 0;
+  font-size: 1.45rem;
+  letter-spacing: 0;
+}
+
+.feedSubtext {
+  margin: 6px 0 0;
+  color: #9aa6c2;
+  font-size: 0.95rem;
+}
+
+.primaryAction,
+.cardButton,
+.cardButtonAlt {
+  min-height: 38px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primaryAction,
+.cardButton {
+  background: #38bdf8;
+  color: #03131e;
+}
+
+.cardButtonAlt {
+  background: rgba(148, 163, 184, 0.08);
+  color: #cbd5e1;
+  border-color: #263345;
+}
+
+.primaryAction:hover,
+.cardButton:hover {
+  background: #7dd3fc;
+}
+
+.cardButtonAlt:hover {
+  border-color: #38bdf8;
+  color: #e6eef8;
+}
+
+.statePanel {
+  border: 1px solid #243246;
+  background: rgba(7, 17, 39, 0.84);
+  color: #b9c4d8;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.pollCard {
+  background: #071127;
+  border: 1px solid #1d2a3d;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.34);
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.pollCard:hover {
+  border-color: #31506c;
+  transform: translateY(-2px);
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitleGroup {
+  min-width: 0;
+  text-align: left;
+}
+
+.cardTitle {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+}
+
+.cardCreator {
+  display: block;
+  margin-top: 4px;
+  color: #9aa6c2;
+  font-size: 0.82rem;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.iconButton {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #263345;
+  border-radius: 8px;
+  background: transparent;
+  color: #9aa6c2;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.menu {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  z-index: 20;
+  min-width: 120px;
+  overflow: hidden;
+  border: 1px solid #263345;
+  border-radius: 8px;
+  background: #0b1220;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+}
+
+.menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: #e6eef8;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu button:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.menu button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.dangerItem {
+  color: #f87171 !important;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tagRow span {
+  border: 1px solid #243246;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #9fdcff;
+  font-size: 0.78rem;
+}
+
+.cardStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  color: #9aa6c2;
+  font-size: 0.82rem;
+}
+
+.cardStats span {
+  border-right: 1px solid #263345;
+  padding-right: 8px;
+}
+
+.cardStats span:last-child {
+  border-right: 0;
+}
+
+.cardBottom {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .feedHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .primaryAction,
+  .cardButton,
+  .cardButtonAlt {
+    width: 100%;
+  }
+
+  .cardBottom {
+    flex-direction: column;
+  }
+}

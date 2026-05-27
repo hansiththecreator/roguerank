@@ -1,47 +1,197 @@
 .creator {
+  max-width: 760px;
+  margin: 18px auto 32px;
   padding: 20px;
-  max-width: 600px;
-  margin: 0 auto;
+  border: 1px solid #1d2a3d;
+  border-radius: 8px;
+  background: #071127;
   color: #e2e8f0;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.32);
+}
+
+.creatorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.creatorHeader h2 {
+  margin: 0;
+}
+
+.creatorHeader p,
+.optionHeader span,
+.notice {
+  color: #9aa6c2;
+  font-size: 0.85rem;
+}
+
+.creator label,
+.optionHeader label {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: 700;
 }
 
 .input {
   width: 100%;
-  padding: 8px;
-  margin: 6px 0 12px 0;
-  border-radius: 6px;
-  border: 1px solid #4a5568;
-  background: #1a202c;
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0b1220;
   color: #e2e8f0;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #38bdf8;
+}
+
+.optionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.optionList {
+  display: grid;
+  gap: 10px;
 }
 
 .optionRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: 32px minmax(160px, 1fr) 78px 54px 36px;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
 }
 
-.fileInput {
-  color: #9aa6c2;
-  font-size: 0.8rem;
+.optionNumber {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #102033;
+  color: #9fdcff;
+  font-weight: 800;
 }
 
-.previewImg {
+.fileLabel {
+  height: 40px;
+  display: grid !important;
+  place-items: center;
+  margin: 0 !important;
+  border: 1px solid #263345;
+  border-radius: 8px;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.fileLabel input {
+  display: none;
+}
+
+.previewImg,
+.previewPlaceholder {
   width: 50px;
   height: 50px;
   border-radius: 8px;
+}
+
+.previewImg {
   object-fit: cover;
+}
+
+.previewPlaceholder {
+  display: grid;
+  place-items: center;
+  border: 1px dashed #334155;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.addBtn,
+.actions button,
+.closeBtn,
+.deleteBtn {
+  min-height: 38px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.addBtn {
+  width: 100%;
+  margin: 14px 0 8px;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: #1f5774;
+  color: #9fdcff;
+}
+
+.deleteBtn {
+  width: 36px;
+  padding: 0;
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.28);
+  color: #f87171;
+}
+
+.closeBtn,
+.cancelBtn {
+  background: transparent;
+  border-color: #334155 !important;
+  color: #cbd5e1;
 }
 
 .actions {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 16px;
 }
 
-.cancelBtn {
-  background: none;
-  border: 1px solid #9aa6c2;
-  color: #9aa6c2;
+.actions button:first-child {
+  background: #38bdf8;
+  color: #03131e;
+}
+
+.actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.notice {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .creator {
+    padding: 14px;
+  }
+
+  .creatorHeader,
+  .actions {
+    flex-direction: column;
+  }
+
+  .closeBtn,
+  .actions button {
+    width: 100%;
+  }
+
+  .optionRow {
+    grid-template-columns: 32px 1fr 54px 36px;
+  }
+
+  .fileLabel {
+    grid-column: 2 / -1;
+  }
 }

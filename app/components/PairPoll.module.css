@@ -1,175 +1,229 @@
 .pollContainer {
-  text-align: center;
-  padding: 20px;
   color: #e6eef8;
+  padding: 18px 0 34px;
 }
 
 .headerRow {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 14px;
 }
 
 .pollTitle {
-  font-size: 1.25rem;
+  margin: 0;
+  font-size: 1.45rem;
+  overflow-wrap: anywhere;
 }
 
 .closeButton {
-  background: transparent;
+  min-height: 38px;
   border: 1px solid #334155;
-  color: #e6eef8;
-  padding: 6px 10px;
   border-radius: 8px;
+  background: transparent;
+  color: #e6eef8;
+  padding: 8px 12px;
   cursor: pointer;
+  font-weight: 700;
+}
+
+.closeButton:hover {
+  border-color: #38bdf8;
 }
 
 .instruction {
-  margin-top: 10px;
+  margin: 16px 0 0;
   color: #9aa6c2;
   font-size: 0.95rem;
+  text-align: center;
+}
+
+.notice,
+.loadingPanel {
+  max-width: 640px;
+  margin: 12px auto 0;
+  border: 1px solid #243246;
+  border-radius: 8px;
+  background: rgba(7, 17, 39, 0.84);
+  color: #b9c4d8;
+  padding: 12px;
+  text-align: center;
 }
 
 .optionsContainer {
   position: relative;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 28px;
-  margin-top: 16px;
+  gap: 20px;
+  margin-top: 18px;
 }
 
 .orText {
-  font-weight: 700;
-  color: #9aa6c2;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #102033;
+  color: #9fdcff;
+  font-weight: 800;
 }
 
 .optionCard {
-  transition: 0.12s;
+  min-width: 0;
+  transition: transform 120ms ease;
 }
 
 .optionCard:hover {
-  transform: translateY(-6px);
+  transform: translateY(-4px);
 }
 
 .voteArea {
-  background: transparent;
-  border: none;
-  cursor: pointer;
+  width: 100%;
+  min-height: 258px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  border: 1px solid #1d2a3d;
+  border-radius: 8px;
+  background: #071127;
+  color: #fbfbfc;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.34);
 }
 
-.optionImg {
-  width: 180px;
-  height: 160px;
-  border-radius: 12px;
+.voteArea:hover {
+  border-color: #38bdf8;
+}
+
+.voteArea:disabled {
+  cursor: wait;
+  opacity: 0.74;
+}
+
+.optionImg,
+.optionImgPlaceholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
-  background: #2d3748;
-  box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+  background: #1d293b;
 }
 
 .optionImgPlaceholder {
-  width: 180px;
-  height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: #2d3748;
-  font-size: 36px;
+  display: grid;
+  place-items: center;
+  color: #7dd3fc;
+  font-size: 2.2rem;
+  font-weight: 800;
 }
 
 .optionText {
-  margin-top: 10px;
-  font-weight: 600;
-  color: #fbfbfc;
+  display: grid;
+  place-items: center;
+  min-height: 62px;
+  padding: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .rankingTitleHeader {
-  margin-top: 22px;
+  margin: 24px auto 0;
+  max-width: 720px;
 }
 
 .rankingList {
   list-style: none;
   padding: 0;
-  max-width: 640px;
+  max-width: 720px;
   margin: 12px auto;
 }
 
 .rankingItem {
-  display: flex;
+  display: grid;
+  grid-template-columns: 34px 48px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  background: rgba(255,255,255,0.02);
-  padding: 8px 10px;
-  border-radius: 10px;
   margin-bottom: 8px;
+  border: 1px solid #1d2a3d;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 9px 10px;
 }
 
 .rankingIndex {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
   background: #c7e9ff;
   color: #071127;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  border-radius: 6px;
+  font-weight: 800;
 }
 
-.rankingThumb {
-  width: 44px;
-  height: 44px;
+.rankingThumb,
+.rankingImg,
+.rankingPlaceholder {
+  width: 48px;
+  height: 48px;
+}
+
+.rankingImg,
+.rankingPlaceholder {
+  border-radius: 8px;
 }
 
 .rankingImg {
-  width: 44px;
-  height: 44px;
   object-fit: cover;
-  border-radius: 6px;
 }
 
 .rankingPlaceholder {
-  width: 44px;
-  height: 44px;
+  display: grid;
+  place-items: center;
   background: #111827;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
+  color: #7dd3fc;
+  font-weight: 800;
 }
 
 .rankingMeta {
+  min-width: 0;
   text-align: left;
 }
 
 .rankingName {
-  font-weight: 700;
+  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .rankingSub {
-  font-size: 12px;
+  margin-top: 3px;
   color: #9aa6c2;
+  font-size: 0.82rem;
 }
 
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(2,6,23,0.85);
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  background: rgba(2, 6, 23, 0.85);
+  padding: 16px;
 }
 
 .modal {
+  width: min(420px, 100%);
+  border: 1px solid #243246;
+  border-radius: 8px;
   background: #071127;
-  padding: 24px;
-  border-radius: 14px;
-  width: 90%;
-  max-width: 420px;
+  padding: 22px;
+}
+
+.modal h2 {
+  margin-top: 0;
 }
 
 .modalSub {
@@ -185,20 +239,55 @@
 
 .modalRanking li {
   margin-bottom: 6px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .modalActions {
   margin-top: 16px;
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 10px;
 }
 
 .modalActions button {
-  padding: 8px 14px;
+  flex: 1;
+  min-height: 38px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid #334155;
+  background: transparent;
+  color: #e6eef8;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.modalActions button:first-child {
+  border-color: transparent;
+  background: #38bdf8;
+  color: #03131e;
+}
+
+@media (max-width: 700px) {
+  .headerRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .closeButton {
+    width: 100%;
+  }
+
+  .optionsContainer {
+    grid-template-columns: 1fr;
+  }
+
+  .orText {
+    margin: 0 auto;
+  }
+
+  .voteArea {
+    min-height: 220px;
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
 }

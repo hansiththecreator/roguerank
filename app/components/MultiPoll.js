@@ -1,179 +1,398 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import styles from "./MultiPoll.module.css";
 import PairPoll from "./PairPoll";
 import PollCreator from "./PollCreator";
-import Header from "./Header";
-
 import { supabase } from "../lib/supabaseClient";
 
-export default function MultiPoll() {
-  const [polls, setPolls] = useState([]);
-  const [selectedPoll, setSelectedPoll] = useState(null);
-  const [showCreator, setShowCreator] = useState(false);
+function makeGuestUser() {
+  return {
+    id: `guest-${Math.random().toString(36).slice(2, 10)}`,
+    username: "Guest",
+    likes: [],
+  };
+}
+
+function normalizePoll(row) {
+  const options = (row.poll_options || row.options || [])
+    .slice()
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .map((o) => ({
+      id: o.id,
+      text: o.text,
+      image: o.image,
+      rating: o.rating ?? 1000,
+      votes: o.votes ?? 0,
+    }));
+
+  return {
+    id: row.id,
+    title: row.title,
+    creator: row.creator,
+    creatorId: row.creatorid ?? row.creator_id ?? row.creatorId,
+    likes: Math.max(0, row.likes ?? 0),
+    total_votes:
+      row.total_votes ??
+      options.reduce((sum, option) => sum + (option.votes || 0), 0),
+    hashtags: row.hashtags || [],
+    createdAt: row.createdate ?? row.createdAt,
+    options,
+  };
+}
+
+export default function MultiPoll({
+  selectedPoll,
+  setSelectedPoll,
+  searchQuery,
+  currentUser,
+  setCurrentUser,
+  polls,
+  setPolls,
+  showCreator,
+  setShowCreator,
+}) {
   const [editingPoll, setEditingPoll] = useState(null);
   const [menuOpenFor, setMenuOpenFor] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoadingPolls, setIsLoadingPolls] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [deletingPollId, setDeletingPollId] = useState(null);
 
-  // ---------- USER INIT ----------
   useEffect(() => {
     const saved = localStorage.getItem("rankr_user");
-    if (saved) {
-      setCurrentUser(JSON.parse(saved));
-    } else {
-      const guest = {
-        id: `guest-${Math.random().toString(36).slice(2, 10)}`,
-        username: "Guest",
-        likes: [],
-      };
+
+    if (!saved) {
+      const guest = makeGuestUser();
       localStorage.setItem("rankr_user", JSON.stringify(guest));
       setCurrentUser(guest);
-    }
-  }, []);
-
-// ---------- LOAD POLLS ----------
-useEffect(() => {
-  async function loadPolls() {
-    const { data, error } = await supabase
-      .from("polls")
-      .select(`*, poll_options(*)`)
-      .order("createdate", { ascending: false });
-
-    if (error) {
-      console.error("Error loading polls:", error);
       return;
     }
 
-    if (!data) return;
+    try {
+      const parsed = JSON.parse(saved);
+      setCurrentUser({ ...parsed, likes: parsed.likes || [] });
+    } catch {
+      const guest = makeGuestUser();
+      localStorage.setItem("rankr_user", JSON.stringify(guest));
+      setCurrentUser(guest);
+    }
+  }, [setCurrentUser]);
 
-    setPolls(
-      data.map((p) => ({
-        id: p.id,
-        title: p.title,
-        creator: p.creator,
-        creatorId: p.creator_id,
-        likes: p.likes,
-        createdAt: p.createdate,
-        options: p.poll_options || [],
-      }))
-    );
-  }
+  useEffect(() => {
+    async function loadPolls() {
+      setIsLoadingPolls(true);
+      setLoadError("");
 
-  loadPolls();
-}, []);
+      const { data, error } = await supabase
+        .from("polls")
+        .select(
+          `
+          *,
+          poll_options (
+            id,
+            text,
+            image,
+            rating,
+            votes
+          )
+        `
+        )
+        .order("createdate", { ascending: false });
 
+      if (error) {
+        console.error("Error loading polls:", error);
+        setLoadError(
+          "Polls could not be loaded. Check the backend connection and try again."
+        );
+        setIsLoadingPolls(false);
+        return;
+      }
 
-  // ---------- LIKE ----------
+      setPolls((data || []).map(normalizePoll));
+      setIsLoadingPolls(false);
+    }
+
+    loadPolls();
+  }, [setPolls]);
+
   const handleLikeToggle = async (pollId) => {
     const poll = polls.find((p) => p.id === pollId);
     if (!poll || !currentUser) return;
 
-    const liked = currentUser.likes.includes(pollId);
-    const newLikes = liked ? poll.likes - 1 : poll.likes + 1;
+    const liked = currentUser.likes?.includes(pollId);
+    const nextLikes = Math.max(0, liked ? poll.likes - 1 : poll.likes + 1);
+    const nextUser = {
+      ...currentUser,
+      likes: liked
+        ? currentUser.likes.filter((id) => id !== pollId)
+        : [...(currentUser.likes || []), pollId],
+    };
 
-    await supabase.from("polls").update({ likes: newLikes }).eq("id", pollId);
+    setCurrentUser(nextUser);
+    localStorage.setItem("rankr_user", JSON.stringify(nextUser));
+    setPolls((prev) =>
+      prev.map((p) => (p.id === pollId ? { ...p, likes: nextLikes } : p))
+    );
 
-    setCurrentUser((u) => {
-      const updated = {
-        ...u,
-        likes: liked
-          ? u.likes.filter((id) => id !== pollId)
-          : [...u.likes, pollId],
-      };
-      localStorage.setItem("rankr_user", JSON.stringify(updated));
-      return updated;
+    const { error } = await supabase
+      .from("polls")
+      .update({ likes: nextLikes })
+      .eq("id", pollId);
+
+    if (error) {
+      console.error("Like update failed:", error);
+      setCurrentUser(currentUser);
+      localStorage.setItem("rankr_user", JSON.stringify(currentUser));
+      setPolls((prev) =>
+        prev.map((p) => (p.id === pollId ? { ...p, likes: poll.likes } : p))
+      );
+    }
+  };
+
+  const handleDelete = async (pollId) => {
+    if (!confirm("Delete this poll?")) return;
+    setDeletingPollId(pollId);
+
+    const { error: optionsError } = await supabase
+      .from("poll_options")
+      .delete()
+      .eq("poll_id", pollId);
+
+    if (optionsError) {
+      console.error("Poll option delete failed:", optionsError);
+      alert("Could not delete poll options.");
+      setDeletingPollId(null);
+      return;
+    }
+
+    const { error: pollError } = await supabase
+      .from("polls")
+      .delete()
+      .eq("id", pollId);
+
+    if (pollError) {
+      console.error("Poll delete failed:", pollError);
+      alert("Could not delete this poll.");
+      setDeletingPollId(null);
+      return;
+    }
+
+    setPolls((prev) => prev.filter((poll) => poll.id !== pollId));
+    setMenuOpenFor(null);
+    setEditingPoll(null);
+    setDeletingPollId(null);
+  };
+
+  const handleReport = (poll) => {
+    const reports = JSON.parse(localStorage.getItem("rankr_reports") || "[]");
+    const alreadyReported = reports.some(
+      (report) => report.pollId === poll.id && report.userId === currentUser?.id
+    );
+
+    if (alreadyReported) {
+      alert("You already reported this poll. Thanks for helping keep voting fair.");
+      setMenuOpenFor(null);
+      return;
+    }
+
+    const nextReports = [
+      ...reports,
+      {
+        pollId: poll.id,
+        title: poll.title,
+        userId: currentUser?.id || "guest",
+        createdAt: Date.now(),
+      },
+    ];
+
+    localStorage.setItem("rankr_reports", JSON.stringify(nextReports));
+    alert("Poll reported. Thanks for helping keep Rogue Rank fair.");
+    setMenuOpenFor(null);
+  };
+
+  const handleSavePoll = async (poll) => {
+    const pollRow = {
+      title: poll.title,
+      creator: poll.creator,
+      creatorid: poll.creatorId,
+      likes: poll.likes ?? 0,
+      hashtags: poll.hashtags ?? [],
+    };
+
+    if (editingPoll) {
+      const { error: pollError } = await supabase
+        .from("polls")
+        .update(pollRow)
+        .eq("id", poll.id);
+      if (pollError) throw pollError;
+
+      const { error: deleteError } = await supabase
+        .from("poll_options")
+        .delete()
+        .eq("poll_id", poll.id);
+      if (deleteError) throw deleteError;
+    } else {
+      const { error: pollError } = await supabase.from("polls").insert({
+        id: poll.id,
+        ...pollRow,
+        createdate: Date.now(),
+        total_votes: 0,
+      });
+      if (pollError) throw pollError;
+    }
+
+    const optionRows = poll.options.map((option) => ({
+      id: option.id,
+      poll_id: poll.id,
+      text: option.text,
+      image: option.image ?? null,
+      rating: option.rating ?? 1000,
+      votes: option.votes ?? 0,
+    }));
+
+    const { error: optionsError } = await supabase
+      .from("poll_options")
+      .insert(optionRows);
+    if (optionsError) throw optionsError;
+
+    const normalized = normalizePoll({
+      ...poll,
+      creatorid: poll.creatorId,
+      total_votes: poll.total_votes ?? 0,
     });
 
+    setShowCreator(false);
+    setEditingPoll(null);
     setPolls((prev) =>
-      prev.map((p) =>
-        p.id === pollId ? { ...p, likes: newLikes } : p
-      )
+      editingPoll
+        ? prev.map((item) => (item.id === poll.id ? normalized : item))
+        : [normalized, ...prev]
     );
   };
 
-  // ---------- DELETE ----------
-  const handleDelete = async (pollId) => {
-    if (!confirm("Delete this poll?")) return;
+  const query = searchQuery?.trim().toLowerCase() || "";
+  const visiblePolls = polls.filter((poll) => {
+    if (!query) return true;
 
-    await supabase.from("poll_options").delete().eq("poll_id", pollId);
-    await supabase.from("polls").delete().eq("id", pollId);
-
-    setPolls((p) => p.filter((x) => x.id !== pollId));
-    setMenuOpenFor(null);
-    setEditingPoll(null);
-  };
-
-  const visiblePolls = polls.filter((p) =>
-    p.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    return [poll.title, poll.creator, ...(poll.hashtags || [])]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+  });
 
   return (
-    <div>
-      <Header
-        onCreateClick={() => setShowCreator(true)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        currentUser={currentUser}
-        setCurrentUser={setCurrentUser}
-        polls={polls}
-        setSelectedPoll={setSelectedPoll}
-      />
-
+    <div className={styles.pollContainer}>
       {!selectedPoll && !showCreator && !editingPoll && (
-        <section className={styles.cardGrid}>
-          {visiblePolls.map((poll) => {
-            const canManage = currentUser?.id === poll.creatorId;
+        <>
+          <div className={styles.feedHeader}>
+            <div>
+              <h2 className={styles.sectionHeading}>Trending Polls</h2>
+              <p className={styles.feedSubtext}>
+                Choose between two options and watch the ranking update.
+              </p>
+            </div>
+            <button
+              className={styles.primaryAction}
+              onClick={() => setShowCreator(true)}
+            >
+              Create poll
+            </button>
+          </div>
 
-            return (
-              <div key={poll.id} className={styles.pollCard}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{poll.title}</strong>
+          {isLoadingPolls && (
+            <div className={styles.statePanel}>Loading polls...</div>
+          )}
+          {loadError && <div className={styles.statePanel}>{loadError}</div>}
+          {!isLoadingPolls && !loadError && visiblePolls.length === 0 && (
+            <div className={styles.statePanel}>
+              No polls found. Start one from the create button.
+            </div>
+          )}
 
-                  {canManage && (
-                    <div style={{ position: "relative" }}>
+          <section className={styles.cardGrid}>
+            {visiblePolls.map((poll) => {
+              const liked = currentUser?.likes?.includes(poll.id);
+              const canManage =
+                currentUser?.id === poll.creatorId ||
+                (!poll.creatorId && currentUser?.username === poll.creator);
+              const isDeleting = deletingPollId === poll.id;
+              const voteCount =
+                poll.total_votes ??
+                poll.options.reduce((sum, option) => sum + (option.votes || 0), 0);
+
+              return (
+                <article key={poll.id} className={styles.pollCard}>
+                  <div className={styles.cardTop}>
+                    <div className={styles.cardTitleGroup}>
+                      <strong className={styles.cardTitle}>{poll.title}</strong>
+                      <span className={styles.cardCreator}>by {poll.creator}</span>
+                    </div>
+
+                    <div className={styles.menuWrap}>
                       <button
                         onClick={() =>
                           setMenuOpenFor(menuOpenFor === poll.id ? null : poll.id)
                         }
-                        style={{ background: "none", border: "none" }}
+                        className={styles.iconButton}
+                        aria-label="Poll actions"
                       >
-                        ⋮
+                        ...
                       </button>
 
                       {menuOpenFor === poll.id && (
                         <div className={styles.menu}>
-                          <button onClick={() => setEditingPoll(poll)}>
-                            Edit poll
+                          <button onClick={() => handleReport(poll)}>
+                            <span aria-hidden="true">{"\u26A0"}</span> Report poll
                           </button>
-                          <button
-                            style={{ color: "red" }}
-                            onClick={() => handleDelete(poll.id)}
-                          >
-                            Delete poll
-                          </button>
+
+                          {canManage && (
+                            <button
+                              className={styles.dangerItem}
+                              disabled={isDeleting}
+                              onClick={() => handleDelete(poll.id)}
+                            >
+                              <span aria-hidden="true">{"\u{1F5D1}"}</span>{" "}
+                              {isDeleting ? "Deleting..." : "Delete poll"}
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {poll.hashtags?.length > 0 && (
+                    <div className={styles.tagRow}>
+                      {poll.hashtags.slice(0, 4).map((tag) => (
+                        <span key={tag}>#{tag}</span>
+                      ))}
+                    </div>
                   )}
-                </div>
 
-                <div style={{ fontSize: 12, color: "#9AA6C2" }}>
-                  by <strong>{poll.creator}</strong>
-                </div>
+                  <div className={styles.cardStats}>
+                    <span>{poll.options.length} options</span>
+                    <span>{voteCount} votes</span>
+                    <span>{poll.likes} likes</span>
+                  </div>
 
-                <div className={styles.actions}>
-                  <button onClick={() => setSelectedPoll(poll)}>
-                    Vote / View
-                  </button>
-                  <button onClick={() => handleLikeToggle(poll.id)}>
-                    ♥ {poll.likes}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </section>
+                  <div className={styles.cardBottom}>
+                    <button
+                      className={styles.cardButton}
+                      onClick={() => setSelectedPoll(poll)}
+                    >
+                      Vote / View
+                    </button>
+
+                    <button
+                      className={styles.cardButtonAlt}
+                      onClick={() => handleLikeToggle(poll.id)}
+                    >
+                      {liked ? "Liked" : "Like"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+        </>
       )}
 
       {(showCreator || editingPoll) && (
@@ -185,45 +404,7 @@ useEffect(() => {
             setShowCreator(false);
             setEditingPoll(null);
           }}
-onCreate={async (poll) => {
-  const { error: pollError } = await supabase
-    .from("polls")
-    .upsert({
-      id: poll.id,
-      title: poll.title,
-      creator: poll.creator,
-      creator_id: poll.creatorId,
-      likes: poll.likes,
-    });
-
-  if (pollError) {
-    console.error("Poll insert failed:", pollError);
-    alert("Poll insert failed. Check console.");
-    return;
-  }
-
-  // insert options
-for (const option of poll.options) {
-  const { error: optionError } = await supabase
-    .from("poll_options")
-    .insert({
-      id: option.id,
-      poll_id: poll.id,
-      text: option.text,
-      image: option.image ?? null,
-      rating: option.rating ?? 1000,
-      votes: option.votes ?? 0,
-    });
-
-  if (optionError) {
-    console.error("Option insert failed:", optionError);
-  }
-}
-
-  setShowCreator(false);
-  setEditingPoll(null);
-  location.reload();
-}}
+          onCreate={handleSavePoll}
         />
       )}
 
@@ -231,9 +412,24 @@ for (const option of poll.options) {
         <PairPoll
           poll={selectedPoll}
           onBack={() => setSelectedPoll(null)}
-          onUpdate={(u) =>
-            setPolls((p) => p.map((x) => (x.id === u.id ? u : x)))
-          }
+          onUpdate={(updatedPoll) => {
+            setSelectedPoll((current) =>
+              current?.id === updatedPoll.id
+                ? { ...current, ...updatedPoll }
+                : current
+            );
+            setPolls((prev) =>
+              prev.map((poll) =>
+                poll.id === updatedPoll.id
+                  ? {
+                      ...poll,
+                      options: updatedPoll.options,
+                      total_votes: updatedPoll.total_votes,
+                    }
+                  : poll
+              )
+            );
+          }}
         />
       )}
     </div>

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import styles from "./styles.module.css";
 import LeftMenu from "./LeftMenu";
 
@@ -17,7 +18,6 @@ export default function Header({
   const [username, setUsername] = useState(currentUser?.username || "");
   const [pfp, setPfp] = useState(currentUser?.pfp || "");
 
-  // Keep username/pfp synced
   useEffect(() => {
     if (currentUser) {
       setUsername(currentUser.username || "");
@@ -25,31 +25,38 @@ export default function Header({
     }
   }, [currentUser]);
 
-  // ✅ FIXED: Random poll (deep clone to avoid reference bugs)
   const handleRandomPoll = () => {
     if (!polls?.length) return;
 
     const randomIndex = Math.floor(Math.random() * polls.length);
+    const poll = structuredClone(polls[randomIndex]);
 
-    // 🔥 THIS LINE IS THE FIX
-    const clonedPoll = structuredClone(polls[randomIndex]);
-
-    setSelectedPoll(clonedPoll);
+    setSelectedPoll(poll);
     setMenuOpen(false);
   };
 
-  // Save user changes
   const handleSave = () => {
-    const updatedUser = { ...currentUser, username, pfp };
+    const updatedUser = {
+      ...(currentUser || {}),
+      username: username.trim() || "Guest",
+      pfp,
+    };
+
     setCurrentUser(updatedUser);
     localStorage.setItem("rankr_user", JSON.stringify(updatedUser));
     setModalOpen(false);
   };
 
-  // Upload profile image
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Please use an image under 2MB.");
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => setPfp(event.target.result);
     reader.readAsDataURL(file);
@@ -60,39 +67,40 @@ export default function Header({
       <header className={styles.headerWrapper}>
         <div className={styles.headerLeft}>
           <button
-            aria-label="menu"
+            aria-label="Open menu"
             onClick={() => setMenuOpen(true)}
             className={styles.barsBtn}
+            type="button"
           >
-            ☰
+            Menu
           </button>
 
-          <img
-  src="/RogueRank.jpeg"
-  alt="Rogue Rank"
-  className={styles.logo}
-/>
+          <img src="/RogueRank.jpeg" alt="Rogue Rank" className={styles.logo} />
 
-          <p>Vote & Rank</p>
+          <div>
+            <h1 className={styles.siteTitle}>Rogue Rank</h1>
+            <p className={styles.siteTagline}>Vote and rank</p>
+          </div>
         </div>
 
         <div className={styles.headerRight}>
           <input
-            placeholder="Search polls, tags, elements..."
+            placeholder="Search polls, tags, creators..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={styles.searchInput}
           />
-          <button onClick={onCreateClick} className="voteButton">
-            ＋ Create
+          <button onClick={onCreateClick} className="voteButton" type="button">
+            Create
           </button>
           <button
             onClick={() => setModalOpen(true)}
             className={styles.profileBtn}
             title="Profile"
+            type="button"
           >
             {pfp ? (
-              <img src={pfp} alt="pfp" className={styles.profileCircleImg} />
+              <img src={pfp} alt="Profile" className={styles.profileCircleImg} />
             ) : (
               <div className={styles.profileCircle}>
                 {username ? username[0].toUpperCase() : "G"}
@@ -122,23 +130,18 @@ export default function Header({
             />
 
             <label className={styles.modalLabel}>Profile Picture</label>
-            <div
-              className={styles.imageUpload}
-              onClick={() => document.getElementById("pfpInput").click()}
-            >
+            <label className={styles.imageUpload}>
               {pfp ? (
                 <img src={pfp} alt="Preview" className={styles.imagePreview} />
               ) : (
                 "Click to upload"
               )}
               <input
-                id="pfpInput"
                 type="file"
                 accept="image/*"
-                style={{ display: "none" }}
                 onChange={handleFileChange}
               />
-            </div>
+            </label>
 
             <label className={styles.modalLabel}>Username</label>
             <input
@@ -147,15 +150,17 @@ export default function Header({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter username..."
+              maxLength={32}
             />
 
             <div className={styles.modalActions}>
-              <button onClick={handleSave} className={styles.saveBtn}>
+              <button onClick={handleSave} className={styles.saveBtn} type="button">
                 Save
               </button>
               <button
                 onClick={() => setModalOpen(false)}
                 className={styles.cancelBtn}
+                type="button"
               >
                 Cancel
               </button>

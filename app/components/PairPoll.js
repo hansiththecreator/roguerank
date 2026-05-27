@@ -1,108 +1,175 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import styles from "./PairPoll.module.css";
 import { updateElo } from "../utils/elo";
 import { supabase } from "../lib/supabaseClient";
 
+function pickRandomPair(options) {
+  if (options.length < 2) return [];
+
+  const a = Math.floor(Math.random() * options.length);
+  let b = Math.floor(Math.random() * options.length);
+
+  while (b === a) {
+    b = Math.floor(Math.random() * options.length);
+  }
+
+  return [options[a], options[b]];
+}
+
 export default function PairPoll({ poll, onBack, onUpdate }) {
-  const [options, setOptions] = useState(
-    (poll?.options || []).map(o => ({ ...o }))
-  );
+  const [options, setOptions] = useState([]);
   const [pair, setPair] = useState([]);
   const [sessionVotes, setSessionVotes] = useState(0);
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    setOptions((poll?.options || []).map(o => ({ ...o })));
-    setSessionVotes(0);
-    setShowSessionModal(false);
+    let isActive = true;
+
+    async function loadFreshPoll() {
+      if (!poll?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setLoadError("");
+
+      const { data, error } = await supabase
+        .from("poll_options")
+        .select("*")
+        .eq("poll_id", poll.id)
+        .order("id", { ascending: true });
+
+      if (!isActive) return;
+
+      if (error) {
+        console.error("Failed loading fresh poll:", error);
+        const fallbackOptions = (poll?.options || []).map((o) => ({
+          ...o,
+          rating: o.rating ?? 1000,
+          votes: o.votes ?? 0,
+        }));
+        setOptions(fallbackOptions);
+        setPair(pickRandomPair(fallbackOptions));
+        setLoadError("Using the last loaded version. New votes may need a refresh.");
+        setIsLoading(false);
+        return;
+      }
+
+      const freshOptions = (data || []).map((o) => ({
+        ...o,
+        rating: o.rating ?? 1000,
+        votes: o.votes ?? 0,
+      }));
+
+      setOptions(freshOptions);
+      setPair(pickRandomPair(freshOptions));
+      setSessionVotes(0);
+      setShowSessionModal(false);
+      setIsLoading(false);
+    }
+
+    loadFreshPoll();
+
+    return () => {
+      isActive = false;
+    };
   }, [poll]);
 
-  useEffect(() => {
-    if (options.length >= 2) pickPair();
-  }, [options.length]);
-
-  function pickPair() {
-    if (options.length < 2) return setPair([]);
-    const idxA = Math.floor(Math.random() * options.length);
-    let idxB = Math.floor(Math.random() * options.length);
-    while (idxB === idxA && options.length > 1) {
-      idxB = Math.floor(Math.random() * options.length);
-    }
-    setPair([options[idxA], options[idxB]]);
-  }
-
-  if (isVoting) return;
-setIsVoting(true);
   async function handleVote(winnerId, loserId) {
-    const winner = options.find(o => o.id === winnerId);
-    const loser = options.find(o => o.id === loserId);
-    if (!winner || !loser) return;
+    if (isVoting) return;
+    setIsVoting(true);
 
-    const wRating = winner.rating ?? 1000;
-    const lRating = loser.rating ?? 1000;
-    const [newW, newL] = updateElo(wRating, lRating, 24);
+    const winner = options.find((o) => o.id === winnerId);
+    const loser = options.find((o) => o.id === loserId);
 
-    // ---------- OPTIMISTIC UI UPDATE ----------
-    const updatedOptions = options.map(o => {
+    if (!winner || !loser) {
+      setIsVoting(false);
+      return;
+    }
+
+    const [newW, newL] = updateElo(
+      winner.rating ?? 1000,
+      loser.rating ?? 1000,
+      24
+    );
+
+    const localWinnerVotes = (winner.votes || 0) + 1;
+    const updatedOptions = options.map((o) => {
       if (o.id === winnerId) {
-        return { ...o, rating: newW, votes: (o.votes || 0) + 1 };
+        return { ...o, rating: newW, votes: localWinnerVotes };
       }
-      if (o.id === loserId) {
-        return { ...o, rating: newL };
-      }
+      if (o.id === loserId) return { ...o, rating: newL };
       return o;
     });
+    const localTotalVotes = updatedOptions.reduce(
+      (sum, option) => sum + (option.votes || 0),
+      0
+    );
 
     setOptions(updatedOptions);
-
-    setSessionVotes(v => {
-      const next = v + 1;
+    setPair(pickRandomPair(updatedOptions));
+    setSessionVotes((value) => {
+      const next = value + 1;
       if (next === 10) setShowSessionModal(true);
       return next;
     });
+    onUpdate?.({
+      ...poll,
+      options: updatedOptions,
+      total_votes: localTotalVotes,
+    });
 
-    const updatedPoll = { ...poll, options: updatedOptions };
-    onUpdate?.(updatedPoll);
+    try {
+      const { data: savedWinner, error: winnerReadError } = await supabase
+        .from("poll_options")
+        .select("votes")
+        .eq("id", winnerId)
+        .single();
 
-    pickPair();
+      if (winnerReadError) throw winnerReadError;
 
-    // ---------- SUPABASE WRITE (IMMEDIATE) ----------
-try {
-  await Promise.all([
-    
-    // update winner
-    supabase
-      .from("poll_options")
-      .update({
-        rating: newW,
-        votes: (winner.votes || 0) + 1,
-      })
-      .eq("id", winnerId),
+      const savedWinnerVotes = (savedWinner?.votes || 0) + 1;
 
-    // update loser
-    supabase
-      .from("poll_options")
-      .update({
-        rating: newL,
-      })
-      .eq("id", loserId),
+      const { error: winnerUpdateError } = await supabase
+        .from("poll_options")
+        .update({ rating: newW, votes: savedWinnerVotes })
+        .eq("id", winnerId);
 
-    // update poll total votes
-    supabase
-      .from("polls")
-      .update({
-        total_votes: (poll.total_votes || 0) + 1
-      })
-      .eq("id", poll.id)
+      if (winnerUpdateError) throw winnerUpdateError;
 
-  ]);
-} catch (err) {
-  console.error("Vote write failed:", err);
-}
+      const { error: loserUpdateError } = await supabase
+        .from("poll_options")
+        .update({ rating: newL })
+        .eq("id", loserId);
 
-setIsVoting(false);
+      if (loserUpdateError) throw loserUpdateError;
+
+      const { data: savedPoll, error: pollReadError } = await supabase
+        .from("polls")
+        .select("total_votes")
+        .eq("id", poll.id)
+        .single();
+
+      if (pollReadError) throw pollReadError;
+
+      const { error: pollUpdateError } = await supabase
+        .from("polls")
+        .update({ total_votes: (savedPoll?.total_votes || 0) + 1 })
+        .eq("id", poll.id);
+
+      if (pollUpdateError) throw pollUpdateError;
+    } catch (err) {
+      console.error("Vote save failed:", err);
+      setLoadError("Your vote was shown locally, but saving failed. Please try again.");
+    } finally {
+      setIsVoting(false);
+    }
   }
 
   const sorted = [...options].sort(
@@ -123,15 +190,21 @@ setIsVoting(false);
         <strong style={{ color: "#e6eef8" }}>{poll.creator}</strong>
       </div>
 
-      <p className={styles.instruction}>Select your choice</p>
+      <p className={styles.instruction}>
+        {isVoting ? "Saving your vote..." : "Select your choice"}
+      </p>
 
-      {pair.length === 2 ? (
+      {loadError && <div className={styles.notice}>{loadError}</div>}
+
+      {isLoading ? (
+        <div className={styles.loadingPanel}>Loading matchup...</div>
+      ) : pair.length === 2 ? (
         <div className={styles.optionsContainer}>
           <div className={styles.optionCard}>
             <button
-            disabled={isVoting}
-            className={styles.voteArea}
-            onClick={() => handleVote(pair[0].id, pair[1].id)}
+              disabled={isVoting}
+              className={styles.voteArea}
+              onClick={() => handleVote(pair[0].id, pair[1].id)}
             >
               {pair[0].image ? (
                 <img
@@ -140,7 +213,7 @@ setIsVoting(false);
                   className={styles.optionImg}
                 />
               ) : (
-                <div className={styles.optionImgPlaceholder}>⭐</div>
+                <div className={styles.optionImgPlaceholder}>?</div>
               )}
               <div className={styles.optionText}>
                 {pair[0].text || "Unnamed"}
@@ -152,6 +225,7 @@ setIsVoting(false);
 
           <div className={styles.optionCard}>
             <button
+              disabled={isVoting}
               className={styles.voteArea}
               onClick={() => handleVote(pair[1].id, pair[0].id)}
             >
@@ -162,7 +236,7 @@ setIsVoting(false);
                   className={styles.optionImg}
                 />
               ) : (
-                <div className={styles.optionImgPlaceholder}>⭐</div>
+                <div className={styles.optionImgPlaceholder}>?</div>
               )}
               <div className={styles.optionText}>
                 {pair[1].text || "Unnamed"}
@@ -191,7 +265,7 @@ setIsVoting(false);
                   className={styles.rankingImg}
                 />
               ) : (
-                <div className={styles.rankingPlaceholder}>⭐</div>
+                <div className={styles.rankingPlaceholder}>?</div>
               )}
             </div>
 
@@ -200,7 +274,7 @@ setIsVoting(false);
                 {o.text || "Unnamed"}
               </div>
               <div className={styles.rankingSub}>
-                {Math.round(o.rating || 0)} points · {o.votes || 0} votes
+                {Math.round(o.rating || 0)} points - {o.votes || 0} votes
               </div>
             </div>
           </li>
@@ -210,7 +284,7 @@ setIsVoting(false);
       {showSessionModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            <h2>Good work, you rocked this poll 🚀</h2>
+            <h2>Good work, you rocked this poll</h2>
             <p className={styles.modalSub}>Top 5 right now</p>
 
             <ol className={styles.modalRanking}>
