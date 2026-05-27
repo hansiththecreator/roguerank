@@ -341,7 +341,7 @@ export default function MultiPoll({
                       {menuOpenFor === poll.id && (
                         <div className={styles.menu}>
                           <button onClick={() => handleReport(poll)}>
-                            <span aria-hidden="true">{"\u26A0"}</span> Report poll
+                            <span aria-hidden="true">{"\u26A0"}</span> Report
                           </button>
 
                           {canManage && (
