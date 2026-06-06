@@ -57,6 +57,7 @@ export default function MultiPoll({
   const [isLoadingPolls, setIsLoadingPolls] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [deletingPollId, setDeletingPollId] = useState(null);
+  const [activeTab, setActiveTab] = useState("latest");
 
   useEffect(() => {
     const saved = localStorage.getItem("rankr_user");
@@ -279,6 +280,25 @@ export default function MultiPoll({
       .some((value) => String(value).toLowerCase().includes(query));
   });
 
+  // Calculate hero stats
+  const totalPolls = visiblePolls.length;
+  const totalVotes = visiblePolls.reduce((sum, p) => sum + (p.total_votes ?? 0), 0);
+  const totalOptions = visiblePolls.reduce((sum, p) => sum + p.options.length, 0);
+
+  // Sort by active tab
+  const sortedPolls = [...visiblePolls].sort((a, b) => {
+    if (activeTab === "popular") {
+      return (b.total_votes ?? 0) - (a.total_votes ?? 0);
+    } else if (activeTab === "liked") {
+      return (b.likes ?? 0) - (a.likes ?? 0);
+    }
+    // latest (default)
+    return 0;
+  });
+
+  // Featured poll is the first one (highest votes)
+  const featuredPoll = [...visiblePolls].sort((a, b) => (b.total_votes ?? 0) - (a.total_votes ?? 0))[0];
+
   return (
     <div className={styles.pollContainer}>
       {!selectedPoll && !showCreator && !editingPoll && (
@@ -287,7 +307,7 @@ export default function MultiPoll({
             <div>
               <h2 className={styles.sectionHeading}>Trending Polls</h2>
               <p className={styles.feedSubtext}>
-                Choose between two options and watch the ranking update.
+                Choose between options and watch the ranking update.
               </p>
             </div>
             <button
@@ -297,6 +317,26 @@ export default function MultiPoll({
               Create poll
             </button>
           </div>
+
+          {/* Hero Stats Section */}
+          {!isLoadingPolls && !loadError && visiblePolls.length > 0 && (
+            <div className={styles.heroSection}>
+              <div className={styles.heroStats}>
+                <div className={styles.heroStat}>
+                  <span className={styles.heroStatNumber}>{totalPolls}</span>
+                  <span className={styles.heroStatLabel}>Polls</span>
+                </div>
+                <div className={styles.heroStat}>
+                  <span className={styles.heroStatNumber}>{totalVotes}</span>
+                  <span className={styles.heroStatLabel}>Total Votes</span>
+                </div>
+                <div className={styles.heroStat}>
+                  <span className={styles.heroStatNumber}>{totalOptions}</span>
+                  <span className={styles.heroStatLabel}>Options</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {isLoadingPolls && (
             <div className={styles.statePanel}>Loading polls...</div>
@@ -308,8 +348,66 @@ export default function MultiPoll({
             </div>
           )}
 
+          {/* Featured/Trending Banner */}
+          {!isLoadingPolls && !loadError && featuredPoll && (
+            <div className={styles.featuredBanner}>
+              <div className={styles.featuredLabel}>🔥 Trending Now</div>
+              {featuredPoll.options[0]?.image && (
+                <img
+                  src={featuredPoll.options[0].image}
+                  alt={featuredPoll.title}
+                  className={styles.featuredImage}
+                />
+              )}
+              <div className={styles.featuredContent}>
+                <h3 className={styles.featuredTitle}>{featuredPoll.title}</h3>
+                <div className={styles.featuredCreator}>by {featuredPoll.creator}</div>
+                {featuredPoll.hashtags?.length > 0 && (
+                  <div className={styles.featuredTags}>
+                    {featuredPoll.hashtags.slice(0, 3).map((tag) => (
+                      <span key={tag}>#{tag}</span>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.featuredVotes}>
+                  <strong>{featuredPoll.total_votes ?? 0}</strong> votes • <strong>{featuredPoll.likes ?? 0}</strong> likes
+                </div>
+                <button
+                  className={styles.featuredButton}
+                  onClick={() => setSelectedPoll(featuredPoll)}
+                >
+                  Vote Now
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Tab Navigation */}
+          {!isLoadingPolls && !loadError && visiblePolls.length > 0 && (
+            <div className={styles.tabNav}>
+              <button
+                className={`${styles.tabButton} ${activeTab === "latest" ? styles.active : ""}`}
+                onClick={() => setActiveTab("latest")}
+              >
+                Latest
+              </button>
+              <button
+                className={`${styles.tabButton} ${activeTab === "popular" ? styles.active : ""}`}
+                onClick={() => setActiveTab("popular")}
+              >
+                Popular
+              </button>
+              <button
+                className={`${styles.tabButton} ${activeTab === "liked" ? styles.active : ""}`}
+                onClick={() => setActiveTab("liked")}
+              >
+                Most Liked
+              </button>
+            </div>
+          )}
+
           <section className={styles.cardGrid}>
-            {visiblePolls.map((poll) => {
+            {sortedPolls.map((poll) => {
               const liked = currentUser?.likes?.includes(poll.id);
               const canManage =
                 currentUser?.id === poll.creatorId ||
@@ -318,75 +416,90 @@ export default function MultiPoll({
               const voteCount =
                 poll.total_votes ??
                 poll.options.reduce((sum, option) => sum + (option.votes || 0), 0);
+              
+              // Get display hashtags (max 3)
+              const displayTags = poll.hashtags?.slice(0, 3) || [];
+              const hiddenTagsCount = (poll.hashtags?.length || 0) - displayTags.length;
 
               return (
                 <article key={poll.id} className={styles.pollCard}>
-                  <div className={styles.cardTop}>
-                    <div className={styles.cardTitleGroup}>
-                      <strong className={styles.cardTitle}>{poll.title}</strong>
-                      <span className={styles.cardCreator}>by {poll.creator}</span>
-                    </div>
-
-                    <div className={styles.menuWrap}>
-                      <button
-                        onClick={() =>
-                          setMenuOpenFor(menuOpenFor === poll.id ? null : poll.id)
-                        }
-                        className={styles.iconButton}
-                        aria-label="Poll actions"
-                      >
-                        ...
-                      </button>
-
-                      {menuOpenFor === poll.id && (
-                        <div className={styles.menu}>
-                          <button onClick={() => handleReport(poll)}>
-                            <span aria-hidden="true">{"\u26A0"}</span> Report
-                          </button>
-
-                          {canManage && (
-                            <button
-                              className={styles.dangerItem}
-                              disabled={isDeleting}
-                              onClick={() => handleDelete(poll.id)}
-                            >
-                              <span aria-hidden="true">{"\u{1F5D1}"}</span>{" "}
-                              {isDeleting ? "Deleting..." : "Delete poll"}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {poll.hashtags?.length > 0 && (
-                    <div className={styles.tagRow}>
-                      {poll.hashtags.slice(0, 4).map((tag) => (
-                        <span key={tag}>#{tag}</span>
-                      ))}
-                    </div>
+                  {poll.options[0]?.image && (
+                    <img
+                      src={poll.options[0].image}
+                      alt={poll.title}
+                      className={styles.cardImage}
+                    />
                   )}
 
-                  <div className={styles.cardStats}>
-                    <span>{poll.options.length} options</span>
-                    <span>{voteCount} votes</span>
-                    <span>{poll.likes} likes</span>
-                  </div>
+                  <div className={styles.cardContent}>
+                    <div className={styles.cardTop}>
+                      <div className={styles.cardTitleGroup}>
+                        <strong className={styles.cardTitle}>{poll.title}</strong>
+                        <span className={styles.cardCreator}>by {poll.creator}</span>
+                      </div>
 
-                  <div className={styles.cardBottom}>
-                    <button
-                      className={styles.cardButton}
-                      onClick={() => setSelectedPoll(poll)}
-                    >
-                      Vote / View
-                    </button>
+                      <div className={styles.menuWrap}>
+                        <button
+                          onClick={() =>
+                            setMenuOpenFor(menuOpenFor === poll.id ? null : poll.id)
+                          }
+                          className={styles.iconButton}
+                          aria-label="Poll actions"
+                        >
+                          ⋮
+                        </button>
 
-                    <button
-                      className={styles.cardButtonAlt}
-                      onClick={() => handleLikeToggle(poll.id)}
-                    >
-                      {liked ? "Liked" : "Like"}
-                    </button>
+                        {menuOpenFor === poll.id && (
+                          <div className={styles.menu}>
+                            <button onClick={() => handleReport(poll)}>
+                              <span aria-hidden="true">{"\u26A0"}</span> Report
+                            </button>
+
+                            {canManage && (
+                              <button
+                                className={styles.dangerItem}
+                                disabled={isDeleting}
+                                onClick={() => handleDelete(poll.id)}
+                              >
+                                <span aria-hidden="true">{"\u{1F5D1}"}</span>{" "}
+                                {isDeleting ? "Deleting..." : "Delete poll"}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {displayTags.length > 0 && (
+                      <div className={styles.tagRow}>
+                        {displayTags.map((tag) => (
+                          <span key={tag}>#{tag}</span>
+                        ))}
+                        {hiddenTagsCount > 0 && <span>+{hiddenTagsCount} more</span>}
+                      </div>
+                    )}
+
+                    <div className={styles.cardStats}>
+                      <span>{poll.options.length} options</span>
+                      <span>{voteCount} votes</span>
+                      <span>{poll.likes} likes</span>
+                    </div>
+
+                    <div className={styles.cardBottom}>
+                      <button
+                        className={styles.cardButton}
+                        onClick={() => setSelectedPoll(poll)}
+                      >
+                        Vote / View
+                      </button>
+
+                      <button
+                        className={styles.cardButtonAlt}
+                        onClick={() => handleLikeToggle(poll.id)}
+                      >
+                        {liked ? "Liked" : "Like"}
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
