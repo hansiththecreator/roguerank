@@ -50,6 +50,31 @@
   border-color: #38bdf8;
 }
 
+.lockedInput {
+  opacity: 0.55;
+  background: #0a1424;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.lockedInput:focus {
+  border-color: #334155;
+}
+
+.lockNote {
+  margin: 8px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #9fdcff;
+  font-size: 0.8rem;
+}
+
+.lockNote::before {
+  content: "🔒";
+  font-size: 0.85rem;
+}
+
 .optionHeader {
   display: flex;
   align-items: center;
