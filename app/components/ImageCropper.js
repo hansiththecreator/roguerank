@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./ImageCropper.module.css";
 
-const ASPECT = 16 / 9;
 const MAX_ZOOM = 5;
 const OUTPUT_WIDTH = 1280;
 const OUTPUT_HEIGHT = 720;
@@ -71,11 +70,16 @@ export default function ImageCropper({ src, onConfirm, onCancel }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onCancel]);
 
+  // zoomTarget may be an absolute number (slider/pinch) or a function of the
+  // previous zoom (wheel), so rapid events that fire before a re-render compose
+  // off the latest value instead of a stale closure.
   const applyZoom = useCallback(
-    (nextZoom, focalX, focalY) => {
+    (zoomTarget, focalX, focalY) => {
       if (!natural || !frame.width) return;
-      const clampedZoom = clamp(nextZoom, 1, MAX_ZOOM);
       setZoom((prevZoom) => {
+        const requested =
+          typeof zoomTarget === "function" ? zoomTarget(prevZoom) : zoomTarget;
+        const clampedZoom = clamp(requested, 1, MAX_ZOOM);
         const ratio = clampedZoom / prevZoom;
         setOffset((prevOffset) => {
           const nextDw = natural.width * coverScale * clampedZoom;
@@ -100,9 +104,9 @@ export default function ImageCropper({ src, onConfirm, onCancel }) {
       const focalX = event.clientX - rect.left;
       const focalY = event.clientY - rect.top;
       const factor = Math.exp(-event.deltaY * 0.0015);
-      applyZoom(zoom * factor, focalX, focalY);
+      applyZoom((prev) => prev * factor, focalX, focalY);
     },
-    [applyZoom, zoom]
+    [applyZoom]
   );
 
   // Wheel listener is attached manually so it can be non-passive (preventDefault).
