@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import styles from "./PollCreator.module.css";
+import ImageCropper from "./ImageCropper";
 
 const MIN_OPTIONS = 5;
 const MAX_OPTIONS = 199;
@@ -35,6 +36,9 @@ export default function PollCreator({
   );
   const [hashtags, setHashtags] = useState(poll?.hashtags?.join(", ") || "");
   const [loading, setLoading] = useState(false);
+  const [cropState, setCropState] = useState(null);
+
+  const optionsLocked = mode === "edit";
 
   const validOptionCount = useMemo(
     () => options.filter((option) => option.text.trim()).length,
@@ -53,14 +57,26 @@ export default function PollCreator({
 
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setOptions((prev) =>
-        prev.map((option, i) =>
-          i === index ? { ...option, image: ev.target.result } : option
-        )
-      );
+      setCropState({ index, src: ev.target.result });
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
+
+  const handleCropConfirm = (croppedImage) => {
+    setCropState((current) => {
+      if (current) {
+        setOptions((prev) =>
+          prev.map((option, i) =>
+            i === current.index ? { ...option, image: croppedImage } : option
+          )
+        );
+      }
+      return null;
+    });
+  };
+
+  const handleCropCancel = () => setCropState(null);
 
   const addOption = () => {
     if (options.length >= MAX_OPTIONS) {
@@ -160,16 +176,30 @@ export default function PollCreator({
         <span>{options.length} total</span>
       </div>
 
+      {optionsLocked && (
+        <p className={styles.lockNote}>
+          Option names are locked to keep voting fair.
+        </p>
+      )}
+
       <div className={styles.optionList}>
         {options.map((option, index) => (
           <div key={option.id} className={styles.optionRow}>
             <span className={styles.optionNumber}>{index + 1}</span>
             <input
-              className={styles.input}
+              className={`${styles.input} ${
+                optionsLocked ? styles.lockedInput : ""
+              }`}
               value={option.text}
               onChange={(e) => updateOptionText(index, e.target.value)}
               placeholder={`Option ${index + 1}`}
               maxLength={70}
+              readOnly={optionsLocked}
+              title={
+                optionsLocked
+                  ? "Option names are locked to keep voting fair."
+                  : undefined
+              }
             />
 
             <label className={styles.fileLabel}>
@@ -235,6 +265,14 @@ export default function PollCreator({
         Please avoid offensive, hateful, or misleading content. You are
         responsible for what you publish.
       </p>
+
+      {cropState && (
+        <ImageCropper
+          src={cropState.src}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
