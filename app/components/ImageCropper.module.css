@@ -1,160 +1,221 @@
-.overlay {
+.cropperOverlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 3000;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
   padding: 16px;
-  background: rgba(2, 6, 23, 0.72);
-  backdrop-filter: blur(2px);
 }
 
-.modal {
-  width: 100%;
-  max-width: 520px;
-  padding: 18px;
-  border: 1px solid #1d2a3d;
+.cropperBox {
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  border: 1px solid #263345;
   border-radius: 12px;
-  background: #071127;
-  color: #e2e8f0;
-  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.55);
+  background: #0d1829;
+  padding: 20px;
 }
 
-.header {
-  margin-bottom: 14px;
+.cropperHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.title {
+.cropperTitle {
+  margin: 0 0 6px;
+  color: #e6eef8;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.cropperHint {
   margin: 0;
-  font-size: 1.05rem;
-}
-
-.subtitle {
-  margin: 4px 0 0;
   color: #9aa6c2;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
 }
 
-.frame {
+.closeBtn,
+.zoomBtn,
+.cropBtn,
+.cancelBtn {
+  min-height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.closeBtn {
+  border: 1px solid #334155;
+  background: transparent;
+  color: #cbd5e1;
+  padding: 8px 12px;
+}
+
+.cropperGrid {
+  display: block;
+}
+
+.stage {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: 8px;
-  background: #0b1220;
-  border: 1px solid #263345;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background:
+    linear-gradient(45deg, rgba(148, 163, 184, 0.08) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(148, 163, 184, 0.08) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.08) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.08) 75%),
+    #071127;
+  background-size: 22px 22px;
+  background-position: 0 0, 0 11px, 11px -11px, -11px 0;
   cursor: grab;
   touch-action: none;
   user-select: none;
 }
 
-.frame:active {
+.stage:active {
   cursor: grabbing;
 }
 
-.image {
+.sourceImage {
   position: absolute;
   top: 0;
   left: 0;
-  transform-origin: top left;
+  display: block;
   max-width: none;
+  max-height: none;
   pointer-events: none;
-  -webkit-user-drag: none;
+  user-select: none;
 }
 
-.grid {
+.frameOverlay {
   position: absolute;
   inset: 0;
+  border: 2px solid #38bdf8;
+  box-shadow: inset 0 0 0 999px rgba(2, 6, 23, 0.08);
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(226, 232, 240, 0.25) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(226, 232, 240, 0.25) 1px, transparent 1px);
-  background-size: 33.333% 33.333%;
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.55);
+}
+
+.frameOverlay::before,
+.frameOverlay::after {
+  content: "";
+  position: absolute;
+  inset: 33.333% 0 auto;
+  border-top: 1px solid rgba(226, 232, 240, 0.45);
+}
+
+.frameOverlay::after {
+  inset: 66.666% 0 auto;
 }
 
 .controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  margin: 16px 0 4px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.zoomIcon {
-  width: 18px;
-  text-align: center;
-  color: #9aa6c2;
+.zoomBtn {
+  border: 0;
+  background: #0ea5e9;
+  color: #042028;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.zoomBtn:hover {
+  background: #38bdf8;
+}
+
+.zoomLevel {
+  min-width: 58px;
+  color: #cbd5e1;
   font-weight: 800;
-  font-size: 1.05rem;
+  text-align: center;
 }
 
-.slider {
-  flex: 1;
-  width: 100%;
-  height: 4px;
-  appearance: none;
-  -webkit-appearance: none;
-  border-radius: 999px;
-  background: #1d2a3d;
-  outline: none;
-  cursor: pointer;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #38bdf8;
-  border: 2px solid #03131e;
-  cursor: pointer;
-}
-
-.slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #38bdf8;
-  border: 2px solid #03131e;
-  cursor: pointer;
-}
-
-.actions {
+.cropperActions {
   display: flex;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
-.actions button {
+.cropBtn,
+.cancelBtn {
   flex: 1;
-  min-height: 40px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-weight: 700;
+  padding: 12px;
+  font-size: 0.95rem;
 }
 
-.confirmBtn {
-  background: #38bdf8;
-  color: #03131e;
+.cropBtn {
+  border: 0;
+  background: #10b981;
+  color: #022c1a;
 }
 
-.confirmBtn:disabled {
-  cursor: wait;
-  opacity: 0.6;
+.cropBtn:hover {
+  background: #34d399;
 }
 
 .cancelBtn {
+  border: 1px solid #334155;
   background: transparent;
-  border-color: #334155;
   color: #cbd5e1;
 }
 
-@media (max-width: 540px) {
-  .modal {
+.cancelBtn:hover,
+.closeBtn:hover {
+  border-color: #0ea5e9;
+  color: #e6eef8;
+}
+
+@media (max-width: 640px) {
+  .cropperOverlay {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .cropperBox {
+    width: 100%;
+    max-height: none;
+    min-height: calc(100vh - 24px);
     padding: 14px;
+    box-sizing: border-box;
+  }
+
+  .cropperHeader,
+  .controls,
+  .cropperActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .closeBtn,
+  .zoomBtn,
+  .cropBtn,
+  .cancelBtn {
+    min-height: 48px;
+    width: 100%;
+    font-size: 1rem;
+  }
+
+  .cropperTitle {
+    font-size: 1.2rem;
+  }
+
+  .cropperHint {
+    font-size: 1rem;
   }
 }

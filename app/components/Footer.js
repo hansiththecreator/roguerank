@@ -1,9 +1,16 @@
 // app/components/Footer.js
 "use client";
 import React from "react";
+import Link from "next/link";
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const linkStyle = {
+    color: "#9AA6C2",
+    textDecoration: "none",
+    transition: "color 120ms ease",
+  };
+
   return (
     <footer style={{
       width: "100%",
@@ -39,8 +46,8 @@ export default function Footer() {
       </div>
 
       <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
-        <div style={{ color: "#9AA6C2" }}>Privacy</div>
-        <div style={{ color: "#9AA6C2" }}>Terms</div>
+        <Link href="/privacy" style={linkStyle}>Privacy</Link>
+        <Link href="/terms" style={linkStyle}>Terms</Link>
         <div style={{ color: "#9AA6C2", opacity: 0.95 }}>Made with ⚡ & ☕</div>
       </div>
     </footer>

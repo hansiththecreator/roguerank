@@ -1,7 +1,12 @@
 // app/components/PollCard.js
 "use client";
 import React, { useState } from "react";
+import Link from "next/link";
 import styles from "./PollCard.module.css";
+
+function getCreatorHref(poll) {
+  return `/creator/${encodeURIComponent(poll?.creatorId || poll?.creator || "unknown")}`;
+}
 
 const PollCard = ({
   poll,
@@ -39,13 +44,10 @@ const PollCard = ({
   return (
     <div className={styles.pollCard}>
       <div className={styles.creatorHeader}>
-        <div
-          className={styles.creatorInfo}
-          onClick={() => onCreatorClick?.(poll.creator)}
-        >
+        <Link className={styles.creatorInfo} href={getCreatorHref(poll)}>
           <div className={styles.creatorName}>{poll.creator}</div>
           <div className={styles.creatorId}>{poll.creatorId}</div>
-        </div>
+        </Link>
 
         {isCreator && (
           <div className={styles.menuWrapper}>

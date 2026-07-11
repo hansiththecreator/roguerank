@@ -1,108 +1,147 @@
-/* app/components/PollCard.module.css */
-
-.pollCard {
-  background: #071127;
-  padding: 14px;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(2,6,23,0.6);
-  color: #e6eef8;
-}
-.creatorHeader {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.creatorInfo { display:flex; flex-direction:column; cursor:pointer; }
-.creatorName { font-weight:700; }
-.creatorId { font-size:12px; color:#9AA6C2; }
-.pollQuestion { margin:12px 0; font-weight:700; font-size:1.05rem; }
-
-/* options grid - larger tiles */
-.pollOptions { display:flex; gap:12px; flex-wrap:wrap; margin-top:8px; justify-content:flex-start; }
-.pollOption {
-  background: #0f172a;
-  border-radius: 12px;
-  border: 1px solid #1f2b3b;
-  padding: 10px;
-  min-width: 160px;
-  width: 160px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:8px;
-  cursor:pointer;
-  transition: transform .12s ease, box-shadow .12s ease;
-}
-.pollOption:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(2,6,23,0.6); }
-
-.optionImg { width:140px; height:120px; object-fit:cover; border-radius:8px; background:#2d3748; }
-.optionImgPlaceholder { width:140px; height:120px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:#2d3748; color:#f1f5f9; font-size:28px; }
-.optionText { font-weight:600; text-align:center; color: #e6eef8; }
-
-/* actions */
-.pollActions { display:flex; align-items:center; gap:10px; margin-top:12px; }
-.iconBtn { background:transparent; border:none; cursor:pointer; font-size:18px; }
-.deleteBtn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: #ef4444;
-  font-size: 18px;
-  padding: 6px;
-  border-radius: 8px;
-}
-.deleteBtn:hover { background: rgba(239,68,68,0.08); }
-
-/* create / add */
-.addOption, .createButton { background:#0ea5e9; color:#042028; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; }
-.input { padding:8px 10px; border-radius:8px; background:#071127; border:1px solid #334155; color:#e6eef8; width:100%; }
-.optionRow { margin-bottom:10px; }
-.deleteOption { background:transparent; border:none; color:#ef4444; cursor:pointer; padding:6px; }
-.fileBtn { cursor:pointer; padding:6px; border-radius:6px; background:#0b1220; border:1px solid #334155; display:inline-block; }
-.fileLabel { display:inline-block; }
-.previewImg { width:120px; height:80px; object-fit:cover; border-radius:8px; margin-left:8px; }
-.previewSmall { width:64px; height:40px; object-fit:cover; border-radius:6px; margin-left:8px; }
-.previewPlaceholder { display:inline-flex; width:64px; height:40px; align-items:center; justify-content:center; background:#111827; border-radius:6px; color:#e6eef8; }
-
-.menuWrapper {
-  position: relative;
+.cropperOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.95);
+  padding: 16px;
 }
 
-.menuBtn {
-  background: transparent;
-  border: none;
-  color: #9aa6c2;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.menu {
-  position: absolute;
-  right: 0;
-  top: 28px;
-  background: #0b1220;
-  border: 1px solid #1f2b3b;
-  border-radius: 8px;
-  min-width: 120px;
-  z-index: 50;
-  overflow: hidden;
-}
-
-.menu button {
+.cropperBox {
+  background: #0d1829;
+  border: 1px solid #263345;
+  border-radius: 14px;
+  padding: 24px;
   width: 100%;
-  padding: 8px 10px;
-  background: transparent;
-  border: none;
+  max-width: 880px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.cropperTitle {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+  font-weight: 800;
   color: #e6eef8;
+}
+
+.cropperHint {
+  margin: 0 0 16px;
+  color: #9aa6c2;
+  font-size: 0.85rem;
+}
+
+/* ✅ CANVAS CONTAINER */
+.canvasWrap {
+  position: relative;
+  margin-bottom: 16px;
+  border: 1px solid #263345;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0f1a;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: grab;
+  user-select: none;
+}
+
+.canvas:active {
+  cursor: grabbing;
+}
+
+/* ✅ CONTROLS */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.zoomBtn {
+  padding: 8px 14px;
+  background: #0ea5e9;
+  color: #042028;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
   cursor: pointer;
-  text-align: left;
+  white-space: nowrap;
+  transition: background 120ms ease;
 }
 
-.menu button:hover {
-  background: #111827;
+.zoomBtn:hover {
+  background: #38bdf8;
 }
 
-.menu .danger {
-  color: #ef4444;
+.zoomLevel {
+  color: #cbd5e1;
+  font-weight: 700;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* ✅ ACTIONS */
+.cropperActions {
+  display: flex;
+  gap: 10px;
+}
+
+.cropBtn {
+  flex: 1;
+  padding: 12px;
+  background: #10b981;
+  color: #022c1a;
+  border: none;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.cropBtn:hover {
+  background: #34d399;
+}
+
+.cancelBtn {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.cancelBtn:hover {
+  border-color: #0ea5e9;
+  color: #e6eef8;
+}
+
+@media (max-width: 640px) {
+  .cropperBox {
+    padding: 16px;
+  }
+
+  .cropperTitle {
+    font-size: 1.1rem;
+  }
+
+  .cropperHint {
+    font-size: 0.8rem;
+  }
 }

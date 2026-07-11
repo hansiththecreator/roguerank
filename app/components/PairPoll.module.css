@@ -1,19 +1,105 @@
 .pollContainer {
   color: #e6eef8;
   padding: 18px 0 34px;
+  max-width: 920px;
+  margin: 0 auto;
 }
 
+/* ✅ HEADER — Live matchup banner */
 .headerRow {
+  background: linear-gradient(135deg, #0d1f3c 0%, #071127 100%);
+  border: 1px solid #1d2a3d;
+  border-radius: 14px;
+  padding: 22px 26px;
+  margin-bottom: 20px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
+}
+
+.headerLeft {
+  min-width: 0;
+}
+
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #38bdf8;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .pollTitle {
-  margin: 0;
-  font-size: 1.45rem;
+  margin: 0 0 12px;
+  font-size: 1.7rem;
+  font-weight: 800;
   overflow-wrap: anywhere;
+  color: #e6eef8;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metaChip {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #263345;
+  border-radius: 999px;
+  padding: 0 14px;
+  font-size: 0.8rem;
+  color: #9aa6c2;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.metaChip strong {
+  color: #e6eef8;
+}
+
+.headerRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.fighterBadge {
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #38bdf8;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .closeButton {
@@ -22,20 +108,15 @@
   border-radius: 8px;
   background: transparent;
   color: #e6eef8;
-  padding: 8px 12px;
+  padding: 8px 16px;
   cursor: pointer;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .closeButton:hover {
   border-color: #38bdf8;
-}
-
-.instruction {
-  margin: 16px 0 0;
-  color: #9aa6c2;
-  font-size: 0.95rem;
-  text-align: center;
+  color: #38bdf8;
 }
 
 .notice,
@@ -50,52 +131,59 @@
   text-align: center;
 }
 
+/* ✅ VOTING CARDS */
 .optionsContainer {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 20px;
-  margin-top: 18px;
+  gap: 18px;
+  margin-top: 8px;
 }
 
-.orText {
+.vsBadge {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 54px;
+  height: 54px;
   border-radius: 999px;
-  background: #102033;
-  color: #9fdcff;
-  font-weight: 800;
+  background: radial-gradient(circle, #0ea5e9, #0369a1);
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.95rem;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15), 0 0 24px rgba(14, 165, 233, 0.5);
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
 }
 
 .optionCard {
   min-width: 0;
-  transition: transform 120ms ease;
+  transition: transform 150ms ease;
 }
 
 .optionCard:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
 }
 
 .voteArea {
   width: 100%;
-  min-height: 258px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  border: 1px solid #1d2a3d;
-  border-radius: 8px;
+  border: 2px solid #1d2a3d;
+  border-radius: 14px;
   background: #071127;
   color: #fbfbfc;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.34);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  padding: 0;
 }
 
 .voteArea:hover {
-  border-color: #38bdf8;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 1px #0ea5e9, 0 24px 48px rgba(14, 165, 233, 0.25);
 }
 
 .voteArea:disabled {
@@ -103,88 +191,187 @@
   opacity: 0.74;
 }
 
-.optionImg,
-.optionImgPlaceholder {
+.optionImgFrame {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  background: #1d293b;
+  aspect-ratio: 16 / 9;
+  background: #020617;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.creatorLink {
+  color: #e6eef8;
+  font-weight: 800;
+  text-decoration: none;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  transition: color 150ms ease;
+}
+
+.creatorLink:hover {
+  color: #38bdf8;
+}
+
+.optionImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .optionImgPlaceholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
   display: grid;
   place-items: center;
-  color: #7dd3fc;
-  font-size: 2.2rem;
-  font-weight: 800;
+  background: linear-gradient(135deg, #1d293b, #0d1829);
+  color: #38bdf8;
+  font-size: 2.8rem;
+  font-weight: 900;
+}
+
+.optionFooter {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 12px 16px;
 }
 
 .optionText {
-  display: grid;
-  place-items: center;
-  min-height: 62px;
-  padding: 12px;
   font-weight: 800;
+  font-size: 1.05rem;
   overflow-wrap: anywhere;
+  margin-bottom: 8px;
 }
 
+.optionStatsRow {
+  display: flex;
+  gap: 8px;
+}
+
+.statPill {
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* ✅ RANKING */
 .rankingTitleHeader {
-  margin: 24px auto 0;
-  max-width: 720px;
+  margin: 28px 0 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e6eef8;
 }
 
 .rankingList {
   list-style: none;
   padding: 0;
-  max-width: 720px;
-  margin: 12px auto;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .rankingItem {
   display: grid;
-  grid-template-columns: 34px 48px minmax(0, 1fr);
+  grid-template-columns: 40px 52px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
   border: 1px solid #1d2a3d;
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.025);
-  padding: 9px 10px;
+  padding: 12px 14px;
+  transition: border-color 120ms ease;
+}
+
+.rankingItem:hover {
+  border-color: #263345;
+}
+
+.rankingItem:nth-child(1) {
+  border-color: rgba(255, 215, 0, 0.45);
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.06), rgba(255, 255, 255, 0.025));
+}
+
+.rankingItem:nth-child(1):hover {
+  border-color: rgba(255, 215, 0, 0.7);
+}
+
+.rankingItem:nth-child(2) {
+  border-color: rgba(226, 232, 240, 0.35);
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.05), rgba(255, 255, 255, 0.025));
+}
+
+.rankingItem:nth-child(2):hover {
+  border-color: rgba(226, 232, 240, 0.55);
+}
+
+.rankingItem:nth-child(3) {
+  border-color: rgba(232, 147, 90, 0.4);
+  background: linear-gradient(90deg, rgba(232, 147, 90, 0.06), rgba(255, 255, 255, 0.025));
+}
+
+.rankingItem:nth-child(3):hover {
+  border-color: rgba(232, 147, 90, 0.65);
 }
 
 .rankingIndex {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #c7e9ff;
-  color: #071127;
   font-weight: 800;
+  font-size: 0.95rem;
+  background: #1d2a3d;
+  color: #e6eef8;
 }
 
-.rankingThumb,
-.rankingImg,
-.rankingPlaceholder {
-  width: 48px;
-  height: 48px;
+.rankingItem:nth-child(1) .rankingIndex {
+  background: linear-gradient(135deg, #ffd700, #f5a623);
+  color: #2b1700;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.5);
 }
 
-.rankingImg,
-.rankingPlaceholder {
-  border-radius: 8px;
+.rankingItem:nth-child(2) .rankingIndex {
+  background: linear-gradient(135deg, #e2e8f0, #a8b3c2);
+  color: #1e293b;
+  box-shadow: 0 0 16px rgba(226, 232, 240, 0.35);
+}
+
+.rankingItem:nth-child(3) .rankingIndex {
+  background: linear-gradient(135deg, #e8935a, #b6651e);
+  color: #2b1400;
+  box-shadow: 0 0 16px rgba(232, 147, 90, 0.4);
+}
+
+.rankingThumb {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
 }
 
 .rankingImg {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
   object-fit: cover;
 }
 
 .rankingPlaceholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: #111827;
   color: #7dd3fc;
   font-weight: 800;
+  font-size: 1.1rem;
 }
 
 .rankingMeta {
@@ -193,16 +380,19 @@
 }
 
 .rankingName {
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.95rem;
   overflow-wrap: anywhere;
+  color: #e6eef8;
 }
 
 .rankingSub {
   margin-top: 3px;
   color: #9aa6c2;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
+/* ✅ SESSION MODAL */
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -215,31 +405,41 @@
 }
 
 .modal {
-  width: min(420px, 100%);
+  width: min(440px, 100%);
   border: 1px solid #243246;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #071127;
-  padding: 22px;
+  padding: 24px;
 }
 
 .modal h2 {
   margin-top: 0;
+  font-size: 1.3rem;
+  color: #e6eef8;
 }
 
 .modalSub {
   color: #9aa6c2;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
 }
 
 .modalRanking {
   list-style: none;
   padding: 0;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .modalRanking li {
-  margin-bottom: 6px;
   font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #1d2a3d;
+  font-size: 0.9rem;
 }
 
 .modalActions {
@@ -250,44 +450,189 @@
 
 .modalActions button {
   flex: 1;
-  min-height: 38px;
+  min-height: 40px;
   border-radius: 8px;
   border: 1px solid #334155;
   background: transparent;
   color: #e6eef8;
   cursor: pointer;
   font-weight: 700;
+  transition: background 120ms ease;
 }
 
 .modalActions button:first-child {
   border-color: transparent;
-  background: #38bdf8;
+  background: #0ea5e9;
   color: #03131e;
 }
 
+.modalActions button:first-child:hover {
+  background: #38bdf8;
+}
+
+/* ✅ COOLDOWN MODAL (kept for future use) */
+.cooldownModal {
+  text-align: center;
+}
+
+.modalHeader {
+  margin-bottom: 16px;
+}
+
+.modalBadge {
+  display: inline-block;
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #38bdf8;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #0ea5e9;
+  margin: 16px 0;
+}
+
+.countdown b {
+  color: #334155;
+  font-weight: 400;
+}
+
+.countdown span {
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 8px;
+  padding: 8px 16px;
+  min-width: 72px;
+  text-align: center;
+}
+
+.cooldownSub {
+  color: #9aa6c2;
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+}
+
+/* ✅ RESPONSIVE */
 @media (max-width: 700px) {
+  .pollContainer {
+    padding: 8px 10px 24px;
+    font-size: 14px;
+  }
+
   .headerRow {
-    align-items: stretch;
-    flex-direction: column;
+    padding: 12px;
+    border-radius: 8px;
+    gap: 10px;
+  }
+
+  .pollTitle {
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+  }
+
+  .headerRight {
+    align-items: flex-start;
+    width: auto;
   }
 
   .closeButton {
-    width: 100%;
+    min-height: 36px;
+    width: auto;
+    font-size: 0.85rem;
+    padding: 7px 12px;
+  }
+
+  .liveBadge,
+  .fighterBadge,
+  .metaChip {
+    font-size: 0.68rem;
+    min-height: 34px;
+    padding: 0 8px;
   }
 
   .optionsContainer {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+    gap: 6px;
+    align-items: stretch;
   }
 
-  .orText {
-    margin: 0 auto;
+  .vsBadge {
+    align-self: center;
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    font-size: 0.68rem;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.14), 0 0 18px rgba(14, 165, 233, 0.42);
+  }
+
+  .optionImgFrame,
+  .optionImgPlaceholder {
+    aspect-ratio: 16 / 9;
   }
 
   .voteArea {
-    min-height: 220px;
+    min-height: 0;
+    height: 100%;
+    border-radius: 9px;
+  }
+
+  .optionFooter {
+    padding: 8px;
+  }
+
+  .optionText {
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+
+  .optionStatsRow {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .statPill {
+    font-size: 0.58rem;
+    padding: 2px 5px;
+  }
+
+  .rankingItem {
+    padding: 14px 12px;
+    min-height: 64px;
+  }
+
+  .modalOverlay {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .modal {
+    width: 100%;
+    min-height: calc(100vh - 24px);
+    padding: 18px;
+    overflow-y: auto;
+    box-sizing: border-box;
   }
 
   .modalActions {
     flex-direction: column;
+  }
+
+  .modalActions button {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .countdown {
+    font-size: 1.8rem;
   }
 }

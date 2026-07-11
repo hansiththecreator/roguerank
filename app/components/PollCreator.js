@@ -1,276 +1,291 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./PollCreator.module.css";
 import ImageCropper from "./ImageCropper";
 
 const MIN_OPTIONS = 5;
-const MAX_OPTIONS = 199;
-const MAX_IMAGE_MB = 2;
+const OPTION_IMAGE_MAX_MB = 3;
+const THUMBNAIL_IMAGE_MAX_MB = 2;
+const MB = 1024 * 1024;
 
-const makeEmptyOption = (seed = 0) => ({
-  text: "",
-  image: null,
-  id: `opt-${Date.now()}-${seed}`,
-  rating: 1000,
-  votes: 0,
-});
+function makeId(prefix) {
+  const random = Math.random().toString(36).slice(2, 7);
+  return `${prefix}-${Date.now()}-${random}`;
+}
+
+function makeEmptyOption() {
+  return {
+    id: makeId("opt"),
+    text: "",
+    image: null,
+  };
+}
 
 export default function PollCreator({
-  onCreate,
-  onCancel,
-  currentUser,
-  poll,
   mode = "create",
+  poll = null,
+  currentUser,
+  onCancel,
+  onCreate,
 }) {
   const [title, setTitle] = useState(poll?.title || "");
   const [options, setOptions] = useState(
-    poll?.options?.length
-      ? poll.options.map((o, i) => ({
-          ...o,
-          id: o.id || `opt-${Date.now()}-${i}`,
-          rating: o.rating ?? 1000,
-          votes: o.votes ?? 0,
-        }))
-      : Array.from({ length: MIN_OPTIONS }, (_, i) => makeEmptyOption(i))
+    poll?.options && poll.options.length > 0
+      ? poll.options
+      : Array.from({ length: MIN_OPTIONS }, makeEmptyOption)
   );
-  const [hashtags, setHashtags] = useState(poll?.hashtags?.join(", ") || "");
-  const [loading, setLoading] = useState(false);
-  const [cropState, setCropState] = useState(null);
-
-  const optionsLocked = mode === "edit";
-
-  const validOptionCount = useMemo(
-    () => options.filter((option) => option.text.trim()).length,
-    [options]
+  const [hashtags, setHashtags] = useState(
+    poll?.hashtags?.join(" ") || ""
   );
+  const [thumbnail, setThumbnail] = useState(poll?.thumbnail || null);
+  const [croppingOption, setCroppingOption] = useState(null);
+  const [croppingThumbnail, setCroppingThumbnail] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleImageUpload = (index, e) => {
+  // ✅ Edit mode — lock option names
+  const isEditing = mode === "edit";
+
+  useEffect(() => {
+    return () => {
+      if (imageToCrop?.startsWith("blob:")) {
+        URL.revokeObjectURL(imageToCrop);
+      }
+    };
+  }, [imageToCrop]);
+
+  const handleAddOption = () => {
+    setOptions([...options, makeEmptyOption()]);
+  };
+
+  const handleRemoveOption = (id) => {
+    if (options.length > MIN_OPTIONS) {
+      setOptions(options.filter((o) => o.id !== id));
+    }
+  };
+
+  const handleOptionChange = (id, field, value) => {
+    // ✅ In edit mode, don't allow name changes
+    if (isEditing && field === "text") return;
+
+    setOptions(
+      options.map((o) => (o.id === id ? { ...o, [field]: value } : o))
+    );
+  };
+
+  const handleImageUpload = (e, optionId) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
-      alert(`Please use an image under ${MAX_IMAGE_MB}MB.`);
+    if (file.size > OPTION_IMAGE_MAX_MB * MB) {
+      alert(`Image must be under ${OPTION_IMAGE_MAX_MB}MB`);
       e.target.value = "";
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCropState({ index, src: ev.target.result });
-    };
-    reader.readAsDataURL(file);
+    setImageToCrop(URL.createObjectURL(file));
+    setCroppingOption(optionId);
     e.target.value = "";
   };
 
-  const handleCropConfirm = (croppedImage) => {
-    setCropState((current) => {
-      if (current) {
-        setOptions((prev) =>
-          prev.map((option, i) =>
-            i === current.index ? { ...option, image: croppedImage } : option
-          )
-        );
-      }
-      return null;
-    });
-  };
+  const handleThumbnailUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleCropCancel = () => setCropState(null);
-
-  const addOption = () => {
-    if (options.length >= MAX_OPTIONS) {
-      alert(`Maximum ${MAX_OPTIONS} options allowed.`);
+    if (file.size > THUMBNAIL_IMAGE_MAX_MB * MB) {
+      alert(`Image must be under ${THUMBNAIL_IMAGE_MAX_MB}MB`);
+      e.target.value = "";
       return;
     }
-    setOptions((prev) => [...prev, makeEmptyOption(prev.length)]);
+
+    setImageToCrop(URL.createObjectURL(file));
+    setCroppingThumbnail(true);
+    e.target.value = "";
   };
 
-  const removeOption = (index) => {
-    if (options.length <= MIN_OPTIONS) {
-      alert(`You must keep at least ${MIN_OPTIONS} options.`);
-      return;
+  const handleCropComplete = (croppedImage) => {
+    if (croppingOption) {
+      setOptions(
+        options.map((o) =>
+          o.id === croppingOption ? { ...o, image: croppedImage } : o
+        )
+      );
+      setCroppingOption(null);
+    } else if (croppingThumbnail) {
+      setThumbnail(croppedImage);
+      setCroppingThumbnail(false);
     }
-    setOptions((prev) => prev.filter((_, i) => i !== index));
+    setImageToCrop(null);
   };
 
-  const updateOptionText = (index, value) => {
-    setOptions((prev) =>
-      prev.map((option, i) =>
-        i === index ? { ...option, text: value } : option
-      )
-    );
-  };
-
-  const handleSubmit = async () => {
+  const handleSave = async () => {
     if (!title.trim()) {
-      alert("Enter a title.");
+      alert("Poll title is required.");
       return;
     }
 
-    const validOptions = options.filter((option) => option.text.trim());
+    const validOptions = options.filter((o) => o.text.trim());
     if (validOptions.length < MIN_OPTIONS) {
-      alert(`Enter at least ${MIN_OPTIONS} valid options.`);
+      alert(`At least ${MIN_OPTIONS} options with names are required.`);
       return;
     }
 
-    const updatedPoll = {
-      ...(poll || {}),
-      id: poll?.id || `poll-${Date.now()}`,
+    setIsSaving(true);
+
+    const newPoll = {
+      id: poll?.id || makeId("poll"),
+      isNew: !poll?.id,
       title: title.trim(),
-      options: validOptions.map((option, i) => ({
-        id: option.id || `opt-${Date.now()}-${i}`,
-        text: option.text.trim(),
-        image: option.image || null,
-        rating: option.rating ?? 1000,
-        votes: option.votes ?? 0,
-      })),
+      creator: currentUser?.username || "Guest",
+      creatorId: currentUser?.id,
       hashtags: hashtags
-        .split(",")
-        .map((tag) => tag.trim().replace(/^#/, ""))
+        .trim()
+        .split(/\s+/)
         .filter(Boolean),
-      creator: poll?.creator || currentUser?.username || "Anonymous",
-      creatorId: poll?.creatorId || currentUser?.id || "guest",
-      likes: poll?.likes ?? 0,
-      total_votes: poll?.total_votes ?? 0,
-      createdAt: poll?.createdAt ?? Date.now(),
+      thumbnail,
+      options: validOptions,
+      likes: poll?.likes || 0,
+      total_votes: poll?.total_votes || 0,
+      createdAt: poll?.createdAt,
     };
 
-    setLoading(true);
-
     try {
-      await onCreate(updatedPoll);
+      await onCreate?.(newPoll);
     } catch (err) {
-      console.error(err);
-      alert("Failed to save poll. Please check the backend connection.");
+      console.error("Save failed:", err);
+      alert(`Failed to save poll. ${err?.message || "Please try again."}`);
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
   return (
-    <div className={styles.creator}>
-      <div className={styles.creatorHeader}>
-        <div>
-          <h2>{mode === "edit" ? "Edit Poll" : "Create a Poll"}</h2>
-          <p>
-            {validOptionCount}/{MIN_OPTIONS} required options ready
-          </p>
-        </div>
-        <button onClick={onCancel} className={styles.closeBtn} type="button">
-          Close
-        </button>
-      </div>
+    <div className={styles.creatorContainer}>
+      <div className={styles.creatorBox}>
+        <h2 className={styles.creatorTitle}>
+          {isEditing ? "Edit Poll" : "Create Poll"}
+        </h2>
 
-      <label>Title</label>
-      <input
-        className={styles.input}
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Who's the GOAT?"
-        maxLength={90}
-      />
+        {/* ✅ POLL TITLE — locked in edit mode */}
+        <label className={styles.label}>Poll Title</label>
+        <input
+          type="text"
+          className={`${styles.input} ${isEditing ? styles.locked : ""}`}
+          value={title}
+          onChange={(e) => !isEditing && setTitle(e.target.value)}
+          placeholder="What's your poll about?"
+          disabled={isEditing}
+          maxLength={120}
+        />
 
-      <div className={styles.optionHeader}>
-        <label>Options</label>
-        <span>{options.length} total</span>
-      </div>
-
-      {optionsLocked && (
-        <p className={styles.lockNote}>
-          Option names are locked to keep voting fair.
-        </p>
-      )}
-
-      <div className={styles.optionList}>
-        {options.map((option, index) => (
-          <div key={option.id} className={styles.optionRow}>
-            <span className={styles.optionNumber}>{index + 1}</span>
+        {/* ✅ POLL THUMBNAIL */}
+        <label className={styles.label}>Poll Cover Image (Optional)</label>
+        <div className={styles.thumbnailUpload}>
+          {thumbnail && (
+            <img src={thumbnail} alt="Cover" className={styles.thumbnailPreview} />
+          )}
+          <label className={styles.uploadBtn}>
+            {thumbnail ? "Change Cover" : "Upload Cover"}
             <input
-              className={`${styles.input} ${
-                optionsLocked ? styles.lockedInput : ""
-              }`}
-              value={option.text}
-              onChange={(e) => updateOptionText(index, e.target.value)}
-              placeholder={`Option ${index + 1}`}
-              maxLength={70}
-              readOnly={optionsLocked}
-              title={
-                optionsLocked
-                  ? "Option names are locked to keep voting fair."
-                  : undefined
-              }
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleThumbnailUpload}
             />
+          </label>
+        </div>
 
-            <label className={styles.fileLabel}>
+        {/* ✅ OPTIONS — names locked in edit mode */}
+        <label className={styles.label}>Options</label>
+        {options.map((option, idx) => (
+          <div key={option.id} className={styles.optionRow}>
+            <div className={styles.optionGroup}>
+              <input
+                type="text"
+                className={`${styles.optionInput} ${isEditing ? styles.locked : ""}`}
+                value={option.text}
+                onChange={(e) =>
+                  handleOptionChange(option.id, "text", e.target.value)
+                }
+                placeholder={`Option ${idx + 1}`}
+                disabled={isEditing}
+                maxLength={80}
+              />
+              {option.image && (
+                <img
+                  src={option.image}
+                  alt={`${option.text || `Option ${idx + 1}`} preview`}
+                  className={styles.optionPreview}
+                />
+              )}
+              {isEditing && (
+                <span className={styles.lockHint}>Name locked to protect voting integrity</span>
+              )}
+            </div>
+
+            {/* ✅ OPTION IMAGE — editable in both modes */}
+            <label className={styles.optionImageBtn}>
+              {option.image ? "✓ Image" : "Add Image"}
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleImageUpload(index, e)}
+                style={{ display: "none" }}
+                onChange={(e) => handleImageUpload(e, option.id)}
               />
-              Upload
             </label>
-
-            {option.image ? (
-              <img
-                src={option.image}
-                alt={`Option ${index + 1}`}
-                className={styles.previewImg}
-              />
-            ) : (
-              <div className={styles.previewPlaceholder}>IMG</div>
-            )}
 
             {options.length > MIN_OPTIONS && (
               <button
-                type="button"
-                className={styles.deleteBtn}
-                onClick={() => removeOption(index)}
-                aria-label={`Remove option ${index + 1}`}
+                className={styles.removeBtn}
+                onClick={() => handleRemoveOption(option.id)}
               >
-                X
+                ✕
               </button>
             )}
           </div>
         ))}
-      </div>
 
-      <button className={styles.addBtn} onClick={addOption} type="button">
-        Add option
-      </button>
-
-      <label>Hashtags</label>
-      <input
-        className={styles.input}
-        value={hashtags}
-        onChange={(e) => setHashtags(e.target.value)}
-        placeholder="football, legends"
-      />
-
-      <div className={styles.actions}>
-        <button onClick={handleSubmit} disabled={loading} type="button">
-          {loading
-            ? "Saving..."
-            : mode === "edit"
-            ? "Save Changes"
-            : "Create Poll"}
+        <button className={styles.addOptionBtn} onClick={handleAddOption}>
+          + Add Option
         </button>
 
-        <button onClick={onCancel} className={styles.cancelBtn} type="button">
-          Cancel
-        </button>
+        {/* ✅ HASHTAGS */}
+        <label className={styles.label}>Hashtags (space-separated)</label>
+        <input
+          type="text"
+          className={styles.input}
+          value={hashtags}
+          onChange={(e) => setHashtags(e.target.value)}
+          placeholder="e.g. cars sports racing"
+        />
+
+        {/* ✅ ACTIONS */}
+        <div className={styles.actions}>
+          <button
+            className={styles.saveBtn}
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving..." : isEditing ? "Update Poll" : "Create Poll"}
+          </button>
+          <button className={styles.cancelBtn} onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
       </div>
 
-      <p className={styles.notice}>
-        Please avoid offensive, hateful, or misleading content. You are
-        responsible for what you publish.
-      </p>
-
-      {cropState && (
+      {/* ✅ IMAGE CROPPER — multi-viewport */}
+      {(croppingOption || croppingThumbnail) && imageToCrop && (
         <ImageCropper
-          src={cropState.src}
-          onConfirm={handleCropConfirm}
-          onCancel={handleCropCancel}
+          imageSrc={imageToCrop}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setCroppingOption(null);
+            setCroppingThumbnail(false);
+            setImageToCrop(null);
+          }}
+          forThumbnail={croppingThumbnail}
         />
       )}
     </div>

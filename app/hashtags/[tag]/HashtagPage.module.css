@@ -1,0 +1,208 @@
+.wrap {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: #e6eef8;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #263345;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #12304d, #071127);
+  padding: 24px;
+  margin-bottom: 22px;
+}
+
+.eyebrow {
+  display: inline-block;
+  color: #38bdf8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  margin-bottom: 8px;
+}
+
+.title {
+  margin: 0;
+  color: #e6eef8;
+  font-size: 2rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.subtext {
+  margin: 8px 0 0;
+  color: #9aa6c2;
+}
+
+.closeButton,
+.voteButton {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: #0ea5e9;
+  color: #042028;
+  cursor: pointer;
+  font-weight: 800;
+  transition: background 120ms ease;
+}
+
+.closeButton {
+  padding: 9px 18px;
+  flex-shrink: 0;
+}
+
+.closeButton:hover,
+.voteButton:hover {
+  background: #38bdf8;
+}
+
+.statePanel {
+  border: 1px solid #243246;
+  background: rgba(7, 17, 39, 0.84);
+  color: #b9c4d8;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid #1d2a3d;
+  border-radius: 12px;
+  background: #071127;
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.34);
+}
+
+.thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #1f2a3b;
+  text-decoration: none;
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.thumbPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #1d2a3d, #0d1829);
+  color: #38bdf8;
+  font-size: 3rem;
+  font-weight: 900;
+}
+
+.cardBody {
+  padding: 14px;
+}
+
+.cardTitle {
+  margin: 0 0 4px;
+  color: #e6eef8;
+  font-size: 1rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.creator {
+  margin: 0 0 10px;
+  color: #9aa6c2;
+  font-size: 0.84rem;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #9aa6c2;
+  font-size: 0.8rem;
+  margin-bottom: 14px;
+}
+
+.stats span:not(:last-child)::after {
+  content: "\2022";
+  margin-left: 10px;
+}
+
+.voteButton {
+  width: 100%;
+  padding: 8px 12px;
+}
+
+@media (max-width: 768px) {
+  .headerRow {
+    align-items: stretch;
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .title {
+    font-size: 1.4rem;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .card {
+    border-radius: 8px;
+  }
+
+  .cardBody {
+    padding: 9px;
+  }
+
+  .cardTitle {
+    font-size: 0.78rem;
+  }
+
+  .creator,
+  .stats {
+    font-size: 0.64rem;
+  }
+
+  .voteButton {
+    min-height: 32px;
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .headerRow {
+    gap: 10px;
+  }
+
+  .closeButton {
+    padding: 8px 12px;
+  }
+
+  .cardTitle {
+    font-size: 0.72rem;
+  }
+
+  .creator,
+  .stats {
+    font-size: 0.58rem;
+  }
+}

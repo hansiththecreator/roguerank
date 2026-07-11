@@ -14,7 +14,7 @@ export default function ProfilePage({ userId }) {
       // ---------- FETCH POLLS FROM SUPABASE ----------
       const { data, error } = await supabase
         .from("polls")
-        .select(`*, poll_options(*)`);
+        .select(`*, poll_options(id, text, image_url, rating, votes)`);
 
       if (error) {
         console.error(error);

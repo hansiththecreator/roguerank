@@ -5,6 +5,29 @@ import Footer from "./components/Footer";
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        {/* ✅ Ezoic Privacy Scripts (must be first) */}
+        <script
+          data-cfasync="false"
+          src="https://cmp.gatekeeperconsent.com/min.js"
+        ></script>
+        <script
+          data-cfasync="false"
+          src="https://the.gatekeeper.com/cmp.min.js"
+        ></script>
+
+        {/* ✅ Ezoic Header Script (initializes ad system) */}
+        <script async src="https://www.ezojs.com/ezoic/sa.min.js"></script>
+        <script>
+          {`
+            window.ezstandalone = window.ezstandalone || {};
+            ezstandalone.cmd = ezstandalone.cmd || [];
+          `}
+        </script>
+
+        {/* ✅ Ezoic Analytics */}
+        <script src="https://ezoicanalytics.com/analytics.js"></script>
+      </head>
       <body style={{
         minHeight: "100vh",
         display: "flex",

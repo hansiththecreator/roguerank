@@ -2,6 +2,10 @@
 "use client";
 import React, { useState } from "react";
 import styles from "./styles.module.css";
+import { makePollImagePath, uploadPollImage } from "../lib/storageImages";
+
+const OPTION_IMAGE_MAX_MB = 3;
+const MB = 1024 * 1024;
 
 const makeEmptyOption = (seed = 0) => ({
   id: `opt-${Date.now()}-${seed}`,
@@ -29,15 +33,25 @@ export default function CreatePoll({ onCreate }) {
     setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, text: value } : o)));
   };
 
-  const handleImageUpload = (id, e) => {
+  const handleImageUpload = async (id, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const data = ev.target.result;
-      setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, image: data } : o)));
-    };
-    reader.readAsDataURL(file);
+
+    if (file.size > OPTION_IMAGE_MAX_MB * MB) {
+      alert(`Image must be under ${OPTION_IMAGE_MAX_MB}MB`);
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      const url = await uploadPollImage(file, makePollImagePath());
+      setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, image: url } : o)));
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      alert(`Image upload failed. ${err?.message || "Please try again."}`);
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const handleCreate = () => {
