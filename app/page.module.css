@@ -1,7 +1,11 @@
 .appShell {
   display: flex;
   min-height: 100vh;
-  background-color: #0a0f1a;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(62, 198, 255, 0.12), transparent 32%),
+    radial-gradient(circle at 86% 10%, rgba(255, 62, 198, 0.1), transparent 30%),
+    linear-gradient(180deg, var(--color-bg-2), var(--color-bg));
+  color: var(--color-text);
 }
 
 .mainShell {
@@ -14,6 +18,7 @@
 .contentScroll {
   flex: 1;
   overflow: auto;
+  scrollbar-color: rgba(62, 198, 255, 0.42) rgba(15, 20, 36, 0.8);
 }
 
 .feedWrap {
@@ -25,6 +30,10 @@
 }
 
 @media (max-width: 768px) {
+  .contentScroll {
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+
   .feedWrap {
     padding: 12px;
   }

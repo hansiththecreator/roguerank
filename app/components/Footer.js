@@ -1,6 +1,3 @@
-// app/components/Footer.js
-"use client";
-import React from "react";
 import Link from "next/link";
 
 export default function Footer() {
@@ -12,7 +9,7 @@ export default function Footer() {
   };
 
   return (
-    <footer style={{
+    <footer className="siteFooter" style={{
       width: "100%",
       borderTop: "1px solid rgba(255,255,255,0.04)",
       padding: "14px 20px",

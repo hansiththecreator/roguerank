@@ -42,6 +42,7 @@
 
 .closeBtn,
 .zoomBtn,
+.resetBtn,
 .cropBtn,
 .cancelBtn {
   min-height: 38px;
@@ -58,13 +59,16 @@
 }
 
 .cropperGrid {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+  align-items: start;
 }
 
 .stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   border: 1px solid #334155;
   border-radius: 10px;
@@ -104,6 +108,15 @@
   pointer-events: none;
 }
 
+.safeArea {
+  position: absolute;
+  inset: 16%;
+  border: 1px dashed rgba(226, 232, 240, 0.58);
+  border-radius: 8px;
+  box-shadow: 0 0 0 999px rgba(2, 6, 23, 0.05);
+  pointer-events: none;
+}
+
 .frameOverlay::before,
 .frameOverlay::after {
   content: "";
@@ -139,11 +152,100 @@
   background: #38bdf8;
 }
 
+.resetBtn {
+  border: 1px solid #334155;
+  background: transparent;
+  color: #cbd5e1;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.resetBtn:hover {
+  border-color: #38bdf8;
+  color: #e6eef8;
+}
+
 .zoomLevel {
   min-width: 58px;
   color: #cbd5e1;
   font-weight: 800;
   text-align: center;
+}
+
+.previewPane {
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 10px;
+  background: rgba(7, 17, 39, 0.66);
+  padding: 14px;
+}
+
+.previewTitle {
+  margin: 0;
+  color: #e6eef8;
+  font-size: 0.96rem;
+  text-transform: uppercase;
+}
+
+.previewHint,
+.safeHint {
+  margin: 4px 0 12px;
+  color: #9aa6c2;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.previewCards {
+  display: grid;
+  gap: 12px;
+}
+
+.previewCard {
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 8px;
+  background: #071127;
+}
+
+.previewCard span {
+  display: block;
+  padding: 8px 10px;
+  color: #38bdf8;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.previewCard strong {
+  display: block;
+  padding: 10px;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.previewImageFrame {
+  overflow: hidden;
+  background: #020617;
+}
+
+.desktopPreview {
+  aspect-ratio: 16 / 10;
+}
+
+.mobilePreview {
+  aspect-ratio: 2 / 1;
+}
+
+.previewImageFrame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 120ms ease, object-position 120ms ease;
+}
+
+.safeHint {
+  margin: 12px 0 0;
 }
 
 .cropperActions {
@@ -195,6 +297,10 @@
     box-sizing: border-box;
   }
 
+  .cropperGrid {
+    grid-template-columns: 1fr;
+  }
+
   .cropperHeader,
   .controls,
   .cropperActions {
@@ -204,6 +310,7 @@
 
   .closeBtn,
   .zoomBtn,
+  .resetBtn,
   .cropBtn,
   .cancelBtn {
     min-height: 48px;

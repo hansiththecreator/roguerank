@@ -71,6 +71,10 @@ export default function LeftMenu({
   );
 
   // ✅ Get visited polls
+  const savedPolls = polls.filter((p) =>
+    currentUser?.savedPolls?.includes(p.id)
+  );
+
   const visitedPolls = polls.filter((p) =>
     visitedPollIds.includes(p.id)
   );
@@ -124,6 +128,17 @@ export default function LeftMenu({
             <Icon name="liked" /> Liked Polls
             {likedPolls.length > 0 && (
               <span className={styles.badge}>{likedPolls.length}</span>
+            )}
+          </button>
+
+          <button
+            className={`${styles.menuItem} ${activeSection === "saved" ? styles.active : ""} ${pulsingItem === "saved" ? styles.menuItemPulse : ""}`}
+            onClick={() => handleSelectSection("saved")}
+            type="button"
+          >
+            <span className={styles.menuIcon}>S</span> Saved Polls
+            {savedPolls.length > 0 && (
+              <span className={styles.badge}>{savedPolls.length}</span>
             )}
           </button>
 
@@ -187,6 +202,42 @@ export default function LeftMenu({
         )}
 
         {/* ✅ VISITED POLLS SECTION */}
+        {activeSection === "saved" && (
+          <section className={styles.contentSection}>
+            {savedPolls.length > 0 ? (
+              <div className={styles.pollList}>
+                {savedPolls.map((poll) => (
+                  <button
+                    key={poll.id}
+                    className={styles.pollItem}
+                    onClick={() => handlePollClick(poll)}
+                    type="button"
+                  >
+                    {poll.options?.[0]?.image && (
+                      <img
+                        src={poll.options[0].image}
+                        alt={poll.title}
+                        className={styles.pollThumb}
+                      />
+                    )}
+                    <div className={styles.pollInfo}>
+                      <h4 className={styles.pollTitle}>{poll.title}</h4>
+                      <p className={styles.pollMeta}>
+                        {poll.options?.length || 0} options Â· {poll.total_votes || 0} votes
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <p>No saved polls yet</p>
+                <span className={styles.emptyEmoji}>S</span>
+              </div>
+            )}
+          </section>
+        )}
+
         {activeSection === "visited" && (
           <section className={styles.contentSection}>
             {visitedPolls.length > 0 ? (

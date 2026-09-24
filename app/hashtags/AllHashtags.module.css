@@ -1,0 +1,144 @@
+.wrap {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  color: #e6eef8;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 24px;
+  border: 1px solid rgba(62, 198, 255, 0.24);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(255, 62, 198, 0.14), transparent 32%),
+    linear-gradient(135deg, #12304d, #071127);
+  box-shadow: 0 18px 52px rgba(2, 6, 23, 0.32);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #38bdf8;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: #e6eef8;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.subtext {
+  margin: 8px 0 0;
+  color: #9aa6c2;
+}
+
+.createButton {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #20d6ff, #ff3ec6);
+  color: #03121f;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 10px 18px;
+}
+
+.statePanel {
+  border: 1px solid #243246;
+  background: rgba(7, 17, 39, 0.84);
+  color: #b9c4d8;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.tagCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #1d2a3d;
+  border-radius: 8px;
+  background: rgba(7, 17, 39, 0.78);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.tagCard:hover {
+  border-color: rgba(62, 198, 255, 0.52);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.34);
+}
+
+.hash {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(14, 165, 233, 0.14);
+  color: #22d3ee;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.tagText {
+  min-width: 0;
+}
+
+.tagText h2 {
+  margin: 0;
+  color: #e6eef8;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.tagText p {
+  margin: 5px 0 0;
+  color: #9aa6c2;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 768px) {
+  .wrap {
+    padding: 12px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .title {
+    font-size: 1.45rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .tagCard {
+    padding: 12px;
+  }
+}

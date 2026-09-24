@@ -68,7 +68,7 @@
 
 .thumbnailPreview {
   width: 88px;
-  height: 64px;
+  aspect-ratio: 1 / 1;
   border-radius: 8px;
   object-fit: cover;
 }
@@ -89,10 +89,16 @@
 
 .uploadBtn,
 .optionImageBtn {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-color: #263345;
   color: #cbd5e1;
+}
+
+.uploadIcon {
+  display: none;
 }
 
 .optionRow {
@@ -110,7 +116,7 @@
 .optionPreview {
   display: block;
   width: 120px;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
   margin-top: 8px;
   border: 1px solid #263345;
   border-radius: 8px;
@@ -139,6 +145,29 @@
   background: rgba(248, 113, 113, 0.08);
   border-color: rgba(248, 113, 113, 0.28);
   color: #f87171;
+}
+
+.contentNote {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 0;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.contentNote span {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+  color: #cbd5e1;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 18px;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .actions {
@@ -170,40 +199,124 @@
   }
 
   .creatorBox {
-    padding: 16px;
+    padding: 14px;
     border-radius: 10px;
   }
 
-  .thumbnailUpload,
   .actions {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .optionRow {
-    grid-template-columns: 1fr;
+  .creatorTitle {
+    margin-bottom: 14px;
+  }
+
+  .label {
+    margin: 10px 0 5px;
+    font-size: 0.9rem;
+  }
+
+  .thumbnailUpload {
+    display: inline-flex;
+    align-items: center;
     gap: 8px;
+    width: auto;
+    max-width: 100%;
+    padding: 6px;
+    border-radius: 8px;
+  }
+
+  .thumbnailPreview {
+    width: 46px;
+    border-radius: 7px;
+  }
+
+  .optionRow {
+    grid-template-columns: minmax(0, 1fr) 46px;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .optionRow:has(.removeBtn) {
+    grid-template-columns: minmax(0, 1fr) 46px 40px;
   }
 
   .input,
   .optionInput,
-  .uploadBtn,
-  .optionImageBtn,
   .addOptionBtn,
-  .removeBtn,
   .saveBtn,
   .cancelBtn {
     min-height: 48px;
     font-size: 1rem;
   }
 
+  .uploadBtn,
+  .optionImageBtn {
+    width: 46px;
+    min-width: 46px;
+    min-height: 46px;
+    padding: 0;
+    border-radius: 9px;
+    font-size: 0;
+  }
+
+  .uploadIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .optionImageBtn::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Ccircle cx='8.5' cy='10.5' r='1.5'/%3E%3Cpath d='m21 16-5-5L5 21'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Ccircle cx='8.5' cy='10.5' r='1.5'/%3E%3Cpath d='m21 16-5-5L5 21'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  .uploadText {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    position: absolute;
+    white-space: nowrap;
+  }
+
   .optionImageBtn,
   .removeBtn {
-    width: 100%;
+    justify-self: stretch;
   }
 
   .removeBtn {
-    padding: 0 12px;
+    width: 40px;
+    min-height: 46px;
+    padding: 0;
+  }
+
+  .optionPreview {
+    width: 58px;
+    margin-top: 6px;
+    border-radius: 7px;
+  }
+
+  .lockHint {
+    margin-top: 4px;
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+
+  .addOptionBtn {
+    margin: 4px 0 6px;
+  }
+
+  .contentNote {
+    margin-top: 12px;
+    font-size: 0.74rem;
+    line-height: 1.3;
   }
 
   .saveBtn,

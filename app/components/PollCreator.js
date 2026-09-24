@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import styles from "./PollCreator.module.css";
 import ImageCropper from "./ImageCropper";
+import ThemedModal from "./ThemedModal";
 
 const MIN_OPTIONS = 5;
 const OPTION_IMAGE_MAX_MB = 3;
@@ -20,6 +21,27 @@ function makeEmptyOption() {
     text: "",
     image: null,
   };
+}
+
+function ImageIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="10.5" r="1.5" />
+      <path d="m21 16-5-5L5 21" />
+    </svg>
+  );
 }
 
 export default function PollCreator({
@@ -43,6 +65,7 @@ export default function PollCreator({
   const [croppingThumbnail, setCroppingThumbnail] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [noticeDialog, setNoticeDialog] = useState(null);
 
   // ✅ Edit mode — lock option names
   const isEditing = mode === "edit";
@@ -79,7 +102,7 @@ export default function PollCreator({
     if (!file) return;
 
     if (file.size > OPTION_IMAGE_MAX_MB * MB) {
-      alert(`Image must be under ${OPTION_IMAGE_MAX_MB}MB`);
+      setNoticeDialog({ title: "Image too large", message: `Image must be under ${OPTION_IMAGE_MAX_MB}MB.` });
       e.target.value = "";
       return;
     }
@@ -94,7 +117,7 @@ export default function PollCreator({
     if (!file) return;
 
     if (file.size > THUMBNAIL_IMAGE_MAX_MB * MB) {
-      alert(`Image must be under ${THUMBNAIL_IMAGE_MAX_MB}MB`);
+      setNoticeDialog({ title: "Image too large", message: `Image must be under ${THUMBNAIL_IMAGE_MAX_MB}MB.` });
       e.target.value = "";
       return;
     }
@@ -121,13 +144,16 @@ export default function PollCreator({
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert("Poll title is required.");
+      setNoticeDialog({ title: "Poll title required", message: "Poll title is required." });
       return;
     }
 
     const validOptions = options.filter((o) => o.text.trim());
     if (validOptions.length < MIN_OPTIONS) {
-      alert(`At least ${MIN_OPTIONS} options with names are required.`);
+      setNoticeDialog({
+        title: "More options needed",
+        message: `At least ${MIN_OPTIONS} options with names are required.`,
+      });
       return;
     }
 
@@ -154,7 +180,7 @@ export default function PollCreator({
       await onCreate?.(newPoll);
     } catch (err) {
       console.error("Save failed:", err);
-      alert(`Failed to save poll. ${err?.message || "Please try again."}`);
+      setNoticeDialog({ title: "Failed to save poll", message: err?.message || "Please try again." });
     } finally {
       setIsSaving(false);
     }
@@ -171,6 +197,8 @@ export default function PollCreator({
         <label className={styles.label}>Poll Title</label>
         <input
           type="text"
+          name="poll-title"
+          autoComplete="off"
           className={`${styles.input} ${isEditing ? styles.locked : ""}`}
           value={title}
           onChange={(e) => !isEditing && setTitle(e.target.value)}
@@ -186,9 +214,12 @@ export default function PollCreator({
             <img src={thumbnail} alt="Cover" className={styles.thumbnailPreview} />
           )}
           <label className={styles.uploadBtn}>
-            {thumbnail ? "Change Cover" : "Upload Cover"}
+            <span className={styles.uploadIcon}><ImageIcon /></span>
+            <span className={styles.uploadText}>{thumbnail ? "Change Cover" : "Upload Cover"}</span>
             <input
               type="file"
+              name="poll-cover-image"
+              aria-label={thumbnail ? "Change poll cover image" : "Upload poll cover image"}
               accept="image/*"
               style={{ display: "none" }}
               onChange={handleThumbnailUpload}
@@ -203,6 +234,8 @@ export default function PollCreator({
             <div className={styles.optionGroup}>
               <input
                 type="text"
+                name={`option-${idx + 1}-text`}
+                autoComplete="off"
                 className={`${styles.optionInput} ${isEditing ? styles.locked : ""}`}
                 value={option.text}
                 onChange={(e) =>
@@ -229,6 +262,8 @@ export default function PollCreator({
               {option.image ? "✓ Image" : "Add Image"}
               <input
                 type="file"
+                name={`option-${idx + 1}-image`}
+                aria-label={`${option.image ? "Change" : "Add"} image for option ${idx + 1}`}
                 accept="image/*"
                 style={{ display: "none" }}
                 onChange={(e) => handleImageUpload(e, option.id)}
@@ -254,6 +289,8 @@ export default function PollCreator({
         <label className={styles.label}>Hashtags (space-separated)</label>
         <input
           type="text"
+          name="poll-hashtags"
+          autoComplete="off"
           className={styles.input}
           value={hashtags}
           onChange={(e) => setHashtags(e.target.value)}
@@ -261,6 +298,11 @@ export default function PollCreator({
         />
 
         {/* ✅ ACTIONS */}
+        <p className={styles.contentNote}>
+          <span aria-hidden="true">!</span>
+          You're responsible for what you post - keep it respectful, no offensive or harmful content.
+        </p>
+
         <div className={styles.actions}>
           <button
             className={styles.saveBtn}
@@ -288,6 +330,14 @@ export default function PollCreator({
           forThumbnail={croppingThumbnail}
         />
       )}
+
+      <ThemedModal
+        open={Boolean(noticeDialog)}
+        title={noticeDialog?.title}
+        message={noticeDialog?.message}
+        confirmLabel="OK"
+        onConfirm={() => setNoticeDialog(null)}
+      />
     </div>
   );
 }

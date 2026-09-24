@@ -7,46 +7,18 @@ import LeftMenu from "./components/LeftMenu";
 import MultiPoll from "./components/MultiPoll";
 import PairPoll from "./components/PairPoll";
 import PollCreator from "./components/PollCreator";
-import { supabase } from "./lib/supabaseClient";
+import { useCurrentUser } from "./hooks/useCurrentUser";
 import pageStyles from "./page.module.css";
-
-function makeGuestUser() {
-  return {
-    id: `guest-${Math.random().toString(36).slice(2, 10)}`,
-    username: "Guest",
-    likes: [],
-  };
-}
 
 export default function Home() {
   const router = useRouter();
   const [isMenuOpen, setMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, setCurrentUser, isCurrentUserLoading } = useCurrentUser();
   const [polls, setPolls] = useState([]);
   const [selectedPoll, setSelectedPoll] = useState(null);
   const [showCreator, setShowCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("all");
-
-  // ✅ Load user from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("rankr_user");
-    if (!saved) {
-      const guest = makeGuestUser();
-      localStorage.setItem("rankr_user", JSON.stringify(guest));
-      setCurrentUser(guest);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(saved);
-      setCurrentUser({ ...parsed, likes: parsed.likes || [] });
-    } catch {
-      const guest = makeGuestUser();
-      localStorage.setItem("rankr_user", JSON.stringify(guest));
-      setCurrentUser(guest);
-    }
-  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -69,43 +41,6 @@ export default function Home() {
         });
       });
     }
-  }, []);
-
-  useEffect(() => {
-    async function loadPolls() {
-      const { data, error } = await supabase
-        .from("polls")
-        .select(`*, poll_options (id, text, image_url, rating, votes)`)
-        .order("createdate", { ascending: false });
-
-      if (error) {
-        console.error("Error loading polls:", error);
-        return;
-      }
-
-      setPolls((data || []).map((poll) => ({
-        id: poll.id,
-        title: poll.title,
-        creator: poll.creator,
-        creatorId: poll.creatorid,
-        likes: poll.likes ?? 0,
-        total_votes: poll.total_votes ?? 0,
-        hashtags: poll.hashtags || [],
-        createdAt: poll.createdate,
-        thumbnail: poll.thumbnail || null,
-        options: (poll.poll_options || [])
-          .sort((a, b) => String(a.id).localeCompare(String(b.id)))
-          .map((o) => ({
-            id: o.id,
-            text: o.text,
-            image: o.image_url ?? o.image,
-            rating: o.rating ?? 1000,
-            votes: o.votes ?? 0,
-          })),
-      })));
-    }
-
-    loadPolls();
   }, []);
 
   // ✅ Track visited polls
@@ -234,6 +169,7 @@ export default function Home() {
           setSearchFilter={setSearchFilter}
           currentUser={currentUser}
           setCurrentUser={setCurrentUser}
+          isCurrentUserLoading={isCurrentUserLoading}
           polls={polls}
           setSelectedPoll={setSelectedPoll}
         />
@@ -244,6 +180,8 @@ export default function Home() {
             <PairPoll
               poll={selectedPoll}
               onBack={() => setSelectedPoll(null)}
+              currentUser={currentUser}
+              setCurrentUser={setCurrentUser}
               onUpdate={(updatedPoll) => {
                 setSelectedPoll(updatedPoll);
                 setPolls((prev) =>

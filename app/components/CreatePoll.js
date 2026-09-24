@@ -2,6 +2,7 @@
 "use client";
 import React, { useState } from "react";
 import styles from "./styles.module.css";
+import ThemedModal from "./ThemedModal";
 import { makePollImagePath, uploadPollImage } from "../lib/storageImages";
 
 const OPTION_IMAGE_MAX_MB = 3;
@@ -18,14 +19,21 @@ const makeEmptyOption = (seed = 0) => ({
 export default function CreatePoll({ onCreate }) {
   const [title, setTitle] = useState("");
   const [options, setOptions] = useState(Array.from({ length: 5 }, (_, i) => makeEmptyOption(i)));
+  const [noticeDialog, setNoticeDialog] = useState(null);
 
   const handleAddOption = () => {
-    if (options.length >= 199) return alert("You’ve reached the max limit (199).");
+    if (options.length >= 199) {
+      setNoticeDialog({ title: "Option limit reached", message: "You've reached the max limit (199)." });
+      return;
+    }
     setOptions((s) => [...s, makeEmptyOption(s.length)]);
   };
 
   const handleRemove = (id) => {
-    if (options.length <= 5) return alert("You must have at least 5 options!");
+    if (options.length <= 5) {
+      setNoticeDialog({ title: "Keep 5 options", message: "You must have at least 5 options." });
+      return;
+    }
     setOptions((s) => s.filter((o) => o.id !== id));
   };
 
@@ -38,7 +46,7 @@ export default function CreatePoll({ onCreate }) {
     if (!file) return;
 
     if (file.size > OPTION_IMAGE_MAX_MB * MB) {
-      alert(`Image must be under ${OPTION_IMAGE_MAX_MB}MB`);
+      setNoticeDialog({ title: "Image too large", message: `Image must be under ${OPTION_IMAGE_MAX_MB}MB.` });
       e.target.value = "";
       return;
     }
@@ -48,16 +56,22 @@ export default function CreatePoll({ onCreate }) {
       setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, image: url } : o)));
     } catch (err) {
       console.error("Image upload failed:", err);
-      alert(`Image upload failed. ${err?.message || "Please try again."}`);
+      setNoticeDialog({ title: "Image upload failed", message: err?.message || "Please try again." });
     } finally {
       e.target.value = "";
     }
   };
 
   const handleCreate = () => {
-    if (!title.trim()) return alert("Enter a poll title!");
+    if (!title.trim()) {
+      setNoticeDialog({ title: "Poll title required", message: "Enter a poll title." });
+      return;
+    }
     const valid = options.filter((o) => o.text.trim());
-    if (valid.length < 5) return alert("You must have at least 5 valid options!");
+    if (valid.length < 5) {
+      setNoticeDialog({ title: "More options needed", message: "You must have at least 5 valid options." });
+      return;
+    }
     const newPoll = {
       id: `poll-${Date.now()}`,
       title: title.trim(),
@@ -82,6 +96,8 @@ export default function CreatePoll({ onCreate }) {
   return (
     <div className={styles.createPoll}>
       <input
+        name="poll-title"
+        autoComplete="off"
         placeholder="Enter poll question..."
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -92,6 +108,8 @@ export default function CreatePoll({ onCreate }) {
         <div key={opt.id} className={styles.optionRow}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
             <input
+              name={`option-${idx + 1}-text`}
+              autoComplete="off"
               placeholder={`Option ${idx + 1}`}
               value={opt.text}
               onChange={(e) => handleText(opt.id, e.target.value)}
@@ -100,17 +118,17 @@ export default function CreatePoll({ onCreate }) {
             />
 
             <label className={styles.fileLabel}>
-              <input type="file" accept="image/*" onChange={(e) => handleImageUpload(opt.id, e)} style={{ display: "none" }} />
-              <span className={styles.fileBtn}>📷</span>
+              <input name={`option-${idx + 1}-image`} type="file" accept="image/*" onChange={(e) => handleImageUpload(opt.id, e)} style={{ display: "none" }} />
+              <span className={styles.fileBtn}>Camera</span>
             </label>
 
             {options.length > 5 && (
-              <button type="button" onClick={() => handleRemove(opt.id)} className={styles.deleteOption}>✕</button>
+              <button type="button" onClick={() => handleRemove(opt.id)} className={styles.deleteOption}>x</button>
             )}
           </div>
 
           <div style={{ marginTop: 6 }}>
-            {opt.image ? <img src={opt.image} alt="preview" className={styles.previewSmall} /> : <div className={styles.previewPlaceholder}>⭐</div>}
+            {opt.image ? <img src={opt.image} alt="preview" className={styles.previewSmall} /> : <div className={styles.previewPlaceholder}>*</div>}
           </div>
         </div>
       ))}
@@ -119,6 +137,14 @@ export default function CreatePoll({ onCreate }) {
         <button type="button" onClick={handleAddOption} className={styles.addOption}>+ Add Option</button>
         <button type="button" onClick={handleCreate} className={styles.createButton} disabled={!title.trim() || options.filter((o) => o.text.trim()).length < 5}>Create Poll</button>
       </div>
+
+      <ThemedModal
+        open={Boolean(noticeDialog)}
+        title={noticeDialog?.title}
+        message={noticeDialog?.message}
+        confirmLabel="OK"
+        onConfirm={() => setNoticeDialog(null)}
+      />
     </div>
   );
 }

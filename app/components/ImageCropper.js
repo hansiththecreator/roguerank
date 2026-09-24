@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./ImageCropper.module.css";
+import ThemedModal from "./ThemedModal";
 import { makePollImagePath, uploadPollImage } from "../lib/storageImages";
 
 const OUTPUT_WIDTH = 1280;
-const OUTPUT_HEIGHT = 720;
+const OUTPUT_HEIGHT = 1280;
 
 export default function ImageCropper({
   imageSrc,
@@ -21,6 +22,7 @@ export default function ImageCropper({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
+  const [noticeDialog, setNoticeDialog] = useState(null);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -160,6 +162,11 @@ export default function ImageCropper({
     });
   };
 
+  const handleReset = () => {
+    setPosition({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
   const handleCrop = async () => {
     if (isUploading) return;
     setIsUploading(true);
@@ -171,13 +178,21 @@ export default function ImageCropper({
       onCropComplete?.(url);
     } catch (err) {
       console.error("Image upload failed:", err);
-      alert(`Image upload failed. ${err?.message || "Please try again."}`);
+      setNoticeDialog({ title: "Image upload failed", message: err?.message || "Please try again." });
     } finally {
       setIsUploading(false);
     }
   };
 
   const layout = getImageLayout();
+  const previewPosition = {
+    x: `${Math.max(0, Math.min(100, 50 - (position.x / Math.max(stageSize.width, 1)) * 70))}%`,
+    y: `${Math.max(0, Math.min(100, 50 - (position.y / Math.max(stageSize.height, 1)) * 70))}%`,
+  };
+  const previewStyle = {
+    objectPosition: `${previewPosition.x} ${previewPosition.y}`,
+    transform: `scale(${Math.min(1.24, Math.max(1, zoom * 0.18 + 0.88))})`,
+  };
 
   return (
     <div className={styles.cropperOverlay}>
@@ -188,7 +203,7 @@ export default function ImageCropper({
               Crop {forThumbnail ? "Poll Cover" : "Option Image"}
             </h2>
             <p className={styles.cropperHint}>
-              Drag the image and zoom until the frame looks right.
+              Make your image look great on desktop and mobile.
             </p>
           </div>
           <button className={styles.closeBtn} onClick={onCancel} type="button">
@@ -197,51 +212,84 @@ export default function ImageCropper({
         </div>
 
         <div className={styles.cropperGrid}>
-          <div
-            ref={stageRef}
-            className={styles.stage}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            onWheel={(event) => {
-              event.preventDefault();
-              handleZoom(event.deltaY > 0 ? -0.08 : 0.08);
-            }}
-          >
-            <img
-              ref={imageRef}
-              src={imageSrc}
-              alt=""
-              className={styles.sourceImage}
-              draggable={false}
-              onLoad={(event) => {
-                setImageMeta({
-                  width: event.currentTarget.naturalWidth,
-                  height: event.currentTarget.naturalHeight,
-                });
+          <div>
+            <div
+              ref={stageRef}
+              className={styles.stage}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              onWheel={(event) => {
+                event.preventDefault();
+                handleZoom(event.deltaY > 0 ? -0.08 : 0.08);
               }}
-              style={
-                layout
-                  ? {
-                      width: `${layout.width}px`,
-                      height: `${layout.height}px`,
-                      transform: `translate(${layout.left}px, ${layout.top}px)`,
-                    }
-                  : undefined
-              }
-            />
-            <div className={styles.frameOverlay} />
+            >
+              <img
+                ref={imageRef}
+                src={imageSrc}
+                alt=""
+                className={styles.sourceImage}
+                draggable={false}
+                onLoad={(event) => {
+                  setImageMeta({
+                    width: event.currentTarget.naturalWidth,
+                    height: event.currentTarget.naturalHeight,
+                  });
+                }}
+                style={
+                  layout
+                    ? {
+                        width: `${layout.width}px`,
+                        height: `${layout.height}px`,
+                        transform: `translate(${layout.left}px, ${layout.top}px)`,
+                      }
+                    : undefined
+                }
+              />
+              <div className={styles.frameOverlay} />
+              <div className={styles.safeArea} />
+            </div>
+
+            <div className={styles.controls}>
+              <button className={styles.zoomBtn} onClick={() => handleZoom(-0.15)} type="button">
+                Zoom Out
+              </button>
+              <span className={styles.zoomLevel}>{Math.round(zoom * 100)}%</span>
+              <button className={styles.zoomBtn} onClick={() => handleZoom(0.15)} type="button">
+                Zoom In
+              </button>
+              <button className={styles.resetBtn} onClick={handleReset} type="button">
+                Reset crop
+              </button>
+            </div>
           </div>
 
-          <div className={styles.controls}>
-            <button className={styles.zoomBtn} onClick={() => handleZoom(-0.15)} type="button">
-              Zoom Out
-            </button>
-            <span className={styles.zoomLevel}>{Math.round(zoom * 100)}%</span>
-            <button className={styles.zoomBtn} onClick={() => handleZoom(0.15)} type="button">
-              Zoom In
-            </button>
+          <div className={styles.previewPane} aria-label="Crop previews">
+            <h3 className={styles.previewTitle}>Preview</h3>
+            <p className={styles.previewHint}>One crop, two live card ratios.</p>
+
+            <div className={styles.previewCards}>
+              <div className={styles.previewCard}>
+                <span>Desktop</span>
+                <div className={`${styles.previewImageFrame} ${styles.desktopPreview}`}>
+                  <img src={imageSrc} alt="" style={previewStyle} />
+                </div>
+                <strong>Option image</strong>
+              </div>
+
+              <div className={styles.previewCard}>
+                <span>Mobile</span>
+                <div className={`${styles.previewImageFrame} ${styles.mobilePreview}`}>
+                  <img src={imageSrc} alt="" style={previewStyle} />
+                </div>
+                <strong>Option image</strong>
+              </div>
+            </div>
+
+            <p className={styles.safeHint}>
+              Keep the subject inside the inner guide so it survives tighter mobile crops.
+            </p>
           </div>
         </div>
 
@@ -254,6 +302,14 @@ export default function ImageCropper({
           </button>
         </div>
       </div>
+
+      <ThemedModal
+        open={Boolean(noticeDialog)}
+        title={noticeDialog?.title}
+        message={noticeDialog?.message}
+        confirmLabel="OK"
+        onConfirm={() => setNoticeDialog(null)}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import styles from "./PollCard.module.css";
+import { getPollCreatorHandle } from "../lib/creatorProfiles";
 
 function getCreatorHref(poll) {
   return `/creator/${encodeURIComponent(poll?.creatorId || poll?.creator || "unknown")}`;
@@ -45,7 +46,7 @@ const PollCard = ({
     <div className={styles.pollCard}>
       <div className={styles.creatorHeader}>
         <Link className={styles.creatorInfo} href={getCreatorHref(poll)}>
-          <div className={styles.creatorName}>{poll.creator}</div>
+          <div className={styles.creatorName}>{getPollCreatorHandle(poll)}</div>
           <div className={styles.creatorId}>{poll.creatorId}</div>
         </Link>
 

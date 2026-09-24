@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import styles from "./ProfilePage.module.css";
 import { supabase } from "../lib/supabaseClient";
+import { getUserProfile } from "../lib/pollEngagement";
 
 export default function ProfilePage({ userId }) {
   const [user, setUser] = useState(null);
@@ -12,9 +13,12 @@ export default function ProfilePage({ userId }) {
       if (!userId) return;
 
       // ---------- FETCH POLLS FROM SUPABASE ----------
-      const { data, error } = await supabase
+      const [{ data, error }, profileResult] = await Promise.all([
+        supabase
         .from("polls")
-        .select(`*, poll_options(id, text, image_url, rating, votes)`);
+        .select(`*, poll_options(id, text, image_url, rating, votes)`),
+        getUserProfile(userId),
+      ]);
 
       if (error) {
         console.error(error);
@@ -28,20 +32,13 @@ export default function ProfilePage({ userId }) {
 
       setUserPolls(targetPolls);
 
-      // ---------- SET USER ----------
-      if (targetPolls.length > 0) {
-        setUser({
-          id: userId,
-          username: targetPolls[0].creator || "Anonymous",
-          pfp: "/default-avatar.png",
-        });
-      } else {
-        setUser({
-          id: userId,
-          username: "Anonymous",
-          pfp: "/default-avatar.png",
-        });
-      }
+      const profile = profileResult.data || {};
+      setUser({
+        id: userId,
+        name: profile.name || "",
+        username: profile.username || targetPolls[0]?.creator || "anonymous",
+        pfp: profile.profile_pic || "/default-avatar.png",
+      });
     }
 
     loadData();
@@ -57,12 +54,14 @@ export default function ProfilePage({ userId }) {
           alt="pfp"
           className={styles.profilePic}
         />
-        <h1 className={styles.username}>{user.username}</h1>
-        <p className={styles.userId}>@{user.id}</p>
+        {user.name && user.name.toLowerCase() !== user.username.toLowerCase() && (
+          <p className={styles.userId}>{user.name}</p>
+        )}
+        <h1 className={styles.username}>@{user.username}</h1>
       </div>
 
       <h2 className={styles.sectionTitle}>
-        Polls by {user.username}
+        Polls by @{user.username}
       </h2>
 
       <div className={styles.pollList}>

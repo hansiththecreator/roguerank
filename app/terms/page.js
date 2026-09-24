@@ -33,18 +33,26 @@ const sections = [
   },
   {
     title: "4. No Guarantee of Accuracy",
-    paragraphs: ["Rankings are generated from user votes and may not reflect objective truth."],
+    paragraphs: [
+      "Rankings are generated from user votes and algorithms. They may be biased, inaccurate, manipulated, or change over time.",
+    ],
   },
   {
-    title: "5. Moderation Rights",
+    title: "5. User-Generated Content Disclaimer",
+    paragraphs: [
+      "Rogue Rank does not pre-screen all content. Users are solely responsible for the content they upload and publish.",
+    ],
+  },
+  {
+    title: "6. Moderation Rights",
     paragraphs: ["Rogue Rank may remove content or accounts at any time for any reason."],
   },
   {
-    title: "6. Disclaimer",
+    title: "7. Disclaimer",
     paragraphs: ['The platform is provided "as is" without warranties of any kind.'],
   },
   {
-    title: "7. Limitation of Liability",
+    title: "8. Limitation of Liability",
     paragraphs: ["Rogue Rank and its operators are not liable for:"],
     items: [
       "User-generated content",
@@ -54,15 +62,15 @@ const sections = [
     ],
   },
   {
-    title: "8. Termination",
+    title: "9. Termination",
     paragraphs: ["We may suspend or terminate access at our discretion."],
   },
   {
-    title: "9. Changes",
+    title: "10. Changes",
     paragraphs: ["These terms may be updated without prior notice."],
   },
   {
-    title: "10. Contact",
+    title: "11. Contact",
     contact: "Roguerankofficial@gmail.com",
   },
 ];

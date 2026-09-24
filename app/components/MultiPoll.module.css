@@ -258,14 +258,22 @@
 .cardButton {
   background: #0ea5e9;
   color: #042028;
-  flex: 1;
+}
+
+.cardButton {
+  flex: 0 1 116px;
 }
 
 .cardButtonShare {
   background: rgba(148, 163, 184, 0.08);
   color: #cbd5e1;
   border: 1px solid #263345;
-  flex: 1;
+  width: 36px;
+  min-width: 36px;
+  flex: 0 0 36px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
 }
 
 .cardButtonAlt {
@@ -307,15 +315,23 @@
   background: rgba(148, 163, 184, 0.08);
   color: #9aa6c2;
   border: 1px solid #263345;
-  width: 40px;
-  min-width: 40px;
+  min-width: 58px;
   height: 36px;
+  padding: 0 10px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 1.2rem;
-  display: grid;
-  place-items: center;
+  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.likeCount {
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .cardButtonLike:hover {
@@ -338,6 +354,39 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
   margin-top: 8px;
+}
+
+.feedSkeletonCard {
+  min-height: 280px;
+  border: 1px solid rgba(62, 198, 255, 0.2);
+  border-radius: 12px;
+  background:
+    linear-gradient(100deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04)),
+    rgba(15, 20, 36, 0.74);
+  background-size: 220% 100%;
+  box-shadow: var(--shadow-panel);
+  animation: feedSkeletonPulse 1.25s infinite;
+}
+
+.feedSentinel {
+  height: 1px;
+}
+
+.feedEndMessage {
+  margin: 18px auto 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+@keyframes feedSkeletonPulse {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
 }
 
 .pollCard {
@@ -420,14 +469,15 @@
 .cardCreatedAt {
   display: block;
   color: #64748b;
-  font-size: 0.74rem;
-  margin-top: 3px;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  margin-top: 1px;
 }
 
 .creatorLink {
   color: inherit;
   text-decoration: none;
-  min-height: 32px;
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
   transition: color 150ms ease;
@@ -444,13 +494,17 @@
 .iconButton {
   width: 32px;
   height: 32px;
-  border: 1px solid #263345;
+  border: 0;
   border-radius: 8px;
   background: transparent;
   color: #9aa6c2;
   cursor: pointer;
   font-weight: 800;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .menu {
@@ -467,7 +521,9 @@
 }
 
 .menu button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   width: 100%;
   padding: 10px 12px;
   border: 0;
@@ -479,6 +535,12 @@
 
 .menu button:hover {
   background: rgba(148, 163, 184, 0.1);
+}
+
+.menu button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 .menu button:disabled {
@@ -603,17 +665,18 @@
 .tagRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px 14px 0;
+  gap: 4px;
+  padding: 6px 14px 0;
 }
 
 .cardStats {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 8px 14px;
   color: #9aa6c2;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
+  line-height: 1.25;
   margin-top: auto;
 }
 
@@ -623,9 +686,10 @@
 }
 
 .cardBottom {
-  display: flex;
-  gap: 8px;
-  padding: 12px 14px 14px;
+  display: grid;
+  grid-template-columns: minmax(88px, 1fr) 36px minmax(58px, auto);
+  gap: 6px;
+  padding: 10px 14px 12px;
   border-top: 1px solid #1d2a3d;
   margin-top: auto;
   align-items: center;
@@ -639,21 +703,34 @@
   }
 
   .heroSection {
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
-    padding: 12px;
+    padding: 11px 12px 12px;
     margin-bottom: 12px;
     border-radius: 8px;
   }
 
+  .heroContent {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+  }
+
   .heroTitle {
-    font-size: 1.05rem;
-    line-height: 1.2;
-    margin-bottom: 0;
+    font-size: clamp(1.45rem, 6vw, 1.7rem);
+    line-height: 1.12;
+    max-width: 21rem;
+    margin: 0 auto;
   }
 
   .heroSub {
-    display: none;
+    max-width: 22rem;
+    margin: 7px auto 0;
+    text-align: center;
+    font-size: 0.78rem;
+    line-height: 1.32;
   }
 
   .heroBadge {
@@ -663,19 +740,25 @@
   }
 
   .heroStats {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    width: auto;
+    width: 100%;
   }
 
   .statBox {
     min-width: 0;
-    padding: 8px 7px;
+    padding: 7px 6px;
     border-radius: 7px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 3px;
   }
 
   .statBox strong {
-    font-size: 0.95rem;
+    font-size: 1rem;
+    margin-bottom: 0;
   }
 
   .statBox span {
@@ -732,6 +815,11 @@
     margin-top: 10px;
   }
 
+  .feedSkeletonCard {
+    min-height: 210px;
+    border-radius: 8px;
+  }
+
   .pollCard {
     width: 100%;
     border-radius: 8px;
@@ -752,9 +840,14 @@
     font-size: 0.64rem;
   }
 
+  .cardCreatedAt {
+    font-size: 0.58rem;
+    line-height: 1.1;
+  }
+
   .tagRow {
-    padding: 7px 8px 0;
-    gap: 4px;
+    padding: 5px 8px 0;
+    gap: 3px;
   }
 
   .tag {
@@ -796,8 +889,9 @@
   }
 
   .cardBottom {
-    gap: 5px;
-    padding: 7px 8px 8px;
+    grid-template-columns: minmax(58px, 1fr) 32px minmax(46px, auto);
+    gap: 4px;
+    padding: 6px 8px 7px;
   }
 
   .cardButton,
@@ -811,13 +905,20 @@
   .cardButton,
   .cardButtonShare {
     font-size: 0.66rem;
-    padding: 6px 5px;
+    padding: 6px 8px;
+  }
+
+  .cardButtonShare {
+    width: 32px;
+    min-width: 32px;
+    padding: 0;
   }
 
   .cardButtonLike {
-    width: 32px;
-    min-width: 32px;
+    width: auto;
+    min-width: 46px;
     height: 32px;
+    padding: 0 7px;
     font-size: 0.95rem;
   }
 
@@ -882,11 +983,17 @@
   }
 
   .heroTitle {
-    font-size: 0.95rem;
+    font-size: clamp(1.32rem, 6.4vw, 1.55rem);
+    max-width: 19rem;
+  }
+
+  .heroSub {
+    max-width: 19rem;
+    font-size: 0.72rem;
   }
 
   .statBox {
-    padding: 7px 5px;
+    padding: 6px 4px;
   }
 
   .statBox strong {
@@ -926,12 +1033,319 @@
   .cardButton,
   .cardButtonShare {
     font-size: 0.6rem;
-    padding: 5px 4px;
+    padding: 5px 7px;
+  }
+
+  .cardButtonShare {
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
   }
 
   .cardButtonLike {
-    width: 28px;
-    min-width: 28px;
+    width: auto;
+    min-width: 42px;
     height: 30px;
+    padding: 0 6px;
+  }
+}
+
+/* Cyberpunk theme overrides */
+.pollContainer {
+  color: var(--color-text);
+}
+
+.heroSection,
+.trendingBanner {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-bg-2), var(--color-bg-2)) padding-box,
+    var(--gradient-neon) border-box;
+  box-shadow: var(--shadow-panel), var(--shadow-cyan);
+}
+
+.heroSection::before,
+.trendingBanner::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(62, 198, 255, 0.22), transparent 34%),
+    radial-gradient(circle at 88% 6%, rgba(255, 62, 198, 0.18), transparent 30%);
+  opacity: 0.78;
+}
+
+.heroContent,
+.heroStats,
+.trendingInner,
+.trendingLabel {
+  position: relative;
+  z-index: 1;
+}
+
+.heroBadge,
+.trendingLabel {
+  border: 1px solid rgba(62, 198, 255, 0.36);
+  background: rgba(62, 198, 255, 0.12);
+  color: var(--color-cyan-bright);
+  box-shadow: 0 0 18px rgba(62, 198, 255, 0.12);
+}
+
+.heroTitle {
+  color: var(--color-text);
+}
+
+.heroTitle span {
+  background: var(--gradient-neon);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.heroSub,
+.trendingCreator,
+.trendingVotes,
+.feedSubtext,
+.cardCreator,
+.cardCreatedAt,
+.cardStats,
+.tagMore,
+.tab {
+  color: var(--color-muted);
+}
+
+.heroStats {
+  align-items: stretch;
+}
+
+.statBox {
+  min-width: 96px;
+  border: 1px solid rgba(62, 198, 255, 0.26);
+  background: rgba(15, 20, 36, 0.74);
+  box-shadow: inset 0 0 22px rgba(62, 198, 255, 0.06);
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.statBox:hover {
+  border-color: rgba(255, 62, 198, 0.62);
+  box-shadow: inset 0 0 22px rgba(62, 198, 255, 0.08), 0 0 24px rgba(255, 62, 198, 0.2);
+  transform: translateY(-2px);
+}
+
+.statBox .statIcon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  background: rgba(62, 198, 255, 0.14);
+  color: var(--color-cyan-bright);
+  border: 1px solid rgba(62, 198, 255, 0.36);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: 0 0 18px rgba(62, 198, 255, 0.16);
+}
+
+.statBox .statIcon svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.statBox:nth-child(2) .statIcon {
+  background: rgba(192, 38, 211, 0.14);
+  border-color: rgba(192, 38, 211, 0.42);
+  color: var(--color-purple-soft);
+  box-shadow: 0 0 18px rgba(192, 38, 211, 0.18);
+}
+
+.statBox:nth-child(3) .statIcon {
+  background: rgba(255, 62, 198, 0.14);
+  border-color: rgba(255, 62, 198, 0.42);
+  color: var(--color-magenta);
+  box-shadow: 0 0 18px rgba(255, 62, 198, 0.18);
+}
+
+.statBox strong,
+.tabActive,
+.creatorLink:hover {
+  color: var(--color-cyan);
+}
+
+.statBox span:last-child {
+  color: var(--color-muted);
+}
+
+.trendingImg,
+.cardThumb,
+.cardThumbPlaceholder {
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    var(--gradient-neon) border-box;
+  border: 1px solid transparent;
+}
+
+.trendingTitle,
+.cardTitle,
+.sectionHeading,
+.reportTitle {
+  color: var(--color-text);
+}
+
+.trendingBtn,
+.primaryAction,
+.cardButton,
+.reportDraftBtn {
+  border: 0;
+  border-radius: 999px;
+  background: var(--gradient-neon);
+  color: var(--color-ink);
+  box-shadow: 0 0 18px rgba(62, 198, 255, 0.18);
+}
+
+.trendingBtn:hover,
+.primaryAction:hover,
+.cardButton:hover,
+.reportDraftBtn:hover {
+  background: var(--gradient-neon);
+  box-shadow: 0 0 26px rgba(62, 198, 255, 0.28), 0 0 28px rgba(255, 62, 198, 0.16);
+}
+
+.tabRow,
+.cardBottom {
+  border-color: rgba(62, 198, 255, 0.18);
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tabActive {
+  border-bottom-color: var(--color-cyan);
+}
+
+.tag {
+  border-color: rgba(62, 198, 255, 0.3);
+  background: rgba(62, 198, 255, 0.1);
+  color: var(--color-cyan-bright);
+}
+
+.tag:nth-child(2n) {
+  border-color: rgba(255, 62, 198, 0.3);
+  background: rgba(255, 62, 198, 0.1);
+  color: var(--color-pink-soft);
+}
+
+.tag:hover {
+  border-color: rgba(255, 62, 198, 0.64);
+  background: rgba(255, 62, 198, 0.16);
+  color: var(--color-text);
+}
+
+.pollCard {
+  position: relative;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-bg-2), var(--color-bg-2)) padding-box,
+    linear-gradient(135deg, var(--color-cyan), rgba(255, 62, 198, 0.7)) border-box;
+  box-shadow: var(--shadow-panel);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.pollCard:nth-child(3n + 2) {
+  background:
+    linear-gradient(var(--color-bg-2), var(--color-bg-2)) padding-box,
+    linear-gradient(135deg, var(--color-purple), var(--color-cyan)) border-box;
+}
+
+.pollCard:nth-child(3n + 3) {
+  background:
+    linear-gradient(var(--color-bg-2), var(--color-bg-2)) padding-box,
+    linear-gradient(135deg, var(--color-magenta), var(--color-green)) border-box;
+}
+
+.pollCard:hover {
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-panel), 0 0 28px rgba(62, 198, 255, 0.2), 0 0 30px rgba(255, 62, 198, 0.14);
+}
+
+.cardThumbPlaceholder {
+  color: var(--color-cyan);
+}
+
+.cardButtonShare,
+.cardButtonAlt,
+.cardButtonLike,
+.iconButton,
+.reportCancelBtn {
+  border-color: rgba(62, 198, 255, 0.26);
+  border-radius: 999px;
+  background: rgba(15, 20, 36, 0.68);
+  color: var(--color-muted);
+}
+
+.cardButtonShare:hover,
+.cardButtonAlt:hover,
+.cardButtonLike:hover,
+.iconButton:hover,
+.reportCancelBtn:hover {
+  border-color: rgba(255, 62, 198, 0.58);
+  background: rgba(255, 62, 198, 0.1);
+  color: var(--color-text);
+}
+
+.liked {
+  color: var(--color-pink) !important;
+  border-color: rgba(251, 113, 133, 0.72) !important;
+  background: rgba(251, 113, 133, 0.12) !important;
+  box-shadow: 0 0 18px rgba(251, 113, 133, 0.18);
+}
+
+.menu,
+.reportModal,
+.statePanel {
+  border-color: rgba(62, 198, 255, 0.22);
+  background: rgba(15, 20, 36, 0.94);
+  box-shadow: var(--shadow-panel);
+}
+
+.reportSelect,
+.reportTextarea {
+  border-color: rgba(62, 198, 255, 0.24);
+  background: var(--color-bg-2);
+  color: var(--color-text);
+}
+
+.reportSelect:focus,
+.reportTextarea:focus {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 0 3px rgba(62, 198, 255, 0.16);
+}
+
+@media (max-width: 768px) {
+  .heroSection {
+    align-items: stretch;
+  }
+
+  .statBox .statIcon {
+    width: 21px;
+    height: 21px;
+    margin: 0 auto;
+    font-size: 0.66rem;
+  }
+
+  .statBox .statIcon svg {
+    width: 13px;
+    height: 13px;
   }
 }

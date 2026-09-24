@@ -5,17 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Header from "../../components/Header";
 import LeftMenu from "../../components/LeftMenu";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { applyCreatorProfilesToPolls, getPollCreatorHandle } from "../../lib/creatorProfiles";
 import { supabase } from "../../lib/supabaseClient";
 import pageStyles from "../../page.module.css";
 import styles from "./HashtagPage.module.css";
-
-function makeGuestUser() {
-  return {
-    id: `guest-${Math.random().toString(36).slice(2, 10)}`,
-    username: "Guest",
-    likes: [],
-  };
-}
 
 function normalizePoll(row) {
   const options = (row.poll_options || [])
@@ -71,31 +65,12 @@ export default function HashtagPage() {
   const router = useRouter();
   const tag = normalizeTag(params?.tag);
   const [isMenuOpen, setMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, setCurrentUser, isCurrentUserLoading } = useCurrentUser();
   const [polls, setPolls] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("all");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("rankr_user");
-    if (!saved) {
-      const guest = makeGuestUser();
-      localStorage.setItem("rankr_user", JSON.stringify(guest));
-      setCurrentUser(guest);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(saved);
-      setCurrentUser({ ...parsed, likes: parsed.likes || [] });
-    } catch {
-      const guest = makeGuestUser();
-      localStorage.setItem("rankr_user", JSON.stringify(guest));
-      setCurrentUser(guest);
-    }
-  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -118,7 +93,7 @@ export default function HashtagPage() {
         return;
       }
 
-      setPolls((data || []).map(normalizePoll));
+      setPolls(await applyCreatorProfilesToPolls((data || []).map(normalizePoll)));
       setIsLoading(false);
     }
 
@@ -169,6 +144,7 @@ export default function HashtagPage() {
           setSearchFilter={setSearchFilter}
           currentUser={currentUser}
           setCurrentUser={setCurrentUser}
+          isCurrentUserLoading={isCurrentUserLoading}
           polls={polls}
         />
 
@@ -209,7 +185,7 @@ export default function HashtagPage() {
 
                     <div className={styles.cardBody}>
                       <h2 className={styles.cardTitle}>{poll.title}</h2>
-                      <p className={styles.creator}>by {poll.creator || "Guest"}</p>
+                      <p className={styles.creator}>by {getPollCreatorHandle(poll)}</p>
                       <div className={styles.stats}>
                         <span>{formatCount(poll.options.length)} options</span>
                         <span>{formatCount(poll.total_votes)} votes</span>

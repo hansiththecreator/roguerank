@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "./MultiPoll.module.css";
 import PairPoll from "./PairPoll";
+import PollGridCard from "./PollGridCard";
 import PollCreator from "./PollCreator";
+import ThemedModal from "./ThemedModal";
 import { supabase } from "../lib/supabaseClient";
+import { applyCreatorProfilesToPolls, getPollCreatorHandle, getPollCreatorUsername } from "../lib/creatorProfiles";
+import { reportPoll as persistPollReport } from "../lib/pollEngagement";
+import { POLL_IMAGES_BUCKET } from "../lib/storageImages";
 
 const REPORT_EMAIL = "roguerankofficial@gmail.com";
 const REPORT_REASONS = [
@@ -17,13 +22,19 @@ const REPORT_REASONS = [
   "Misleading poll",
   "Other",
 ];
+const POLL_PAGE_SIZE = 12;
+const POLL_LOAD_TIMEOUT_MS = 20000;
+let initialPollPagePromise = null;
 
-function makeGuestUser() {
-  return {
-    id: `guest-${Math.random().toString(36).slice(2, 10)}`,
-    username: "Guest",
-    likes: [],
-  };
+function withTimeout(promise, timeoutMs, message) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
 }
 
 function normalizePoll(row) {
@@ -60,6 +71,47 @@ function formatCount(num) {
   if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
   return String(n);
+}
+
+function HeroStatIcon({ name }) {
+  const common = {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": "true",
+  };
+  const paths = {
+    polls: (
+      <>
+        <path d="m12 3 8 4-8 4-8-4 8-4Z" />
+        <path d="m4 12 8 4 8-4" />
+        <path d="m4 17 8 4 8-4" />
+      </>
+    ),
+    votes: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </>
+    ),
+    options: (
+      <>
+        <path d="M7 18v-7" />
+        <path d="M12 18V6" />
+        <path d="M17 18v-4" />
+        <path d="M5 18h14" />
+      </>
+    ),
+  };
+
+  return <svg {...common}>{paths[name]}</svg>;
 }
 
 function formatTimeAgo(value) {
@@ -102,6 +154,27 @@ function getCreatorHref(poll) {
   return `/creator/${encodeURIComponent(poll.creatorId || poll.creator || "unknown")}`;
 }
 
+function getStoragePathFromPublicUrl(url) {
+  if (!url || typeof url !== "string") return null;
+
+  const marker = `/storage/v1/object/public/${POLL_IMAGES_BUCKET}/`;
+
+  try {
+    const { pathname } = new URL(url);
+    const markerIndex = pathname.indexOf(marker);
+    if (markerIndex === -1) return null;
+
+    const path = pathname.slice(markerIndex + marker.length);
+    return path ? decodeURIComponent(path) : null;
+  } catch {
+    const markerIndex = url.indexOf(marker);
+    if (markerIndex === -1) return null;
+
+    const path = url.slice(markerIndex + marker.length).split("?")[0];
+    return path ? decodeURIComponent(path) : null;
+  }
+}
+
 export default function MultiPoll({
   selectedPoll,
   setSelectedPoll,
@@ -115,54 +188,155 @@ export default function MultiPoll({
   setShowCreator,
 }) {
   const router = useRouter();
+  const loadMoreRef = useRef(null);
+  const isFetchingMoreRef = useRef(false);
   const [editingPoll, setEditingPoll] = useState(null);
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [isLoadingPolls, setIsLoadingPolls] = useState(true);
+  const [isFetchingMorePolls, setIsFetchingMorePolls] = useState(false);
+  const [nextPollOffset, setNextPollOffset] = useState(0);
+  const [hasMorePolls, setHasMorePolls] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [deletingPollId, setDeletingPollId] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState(null);
+  const [noticeDialog, setNoticeDialog] = useState(null);
   const [activeTab, setActiveTab] = useState("latest");
   const [reportPoll, setReportPoll] = useState(null);
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0]);
   const [reportDescription, setReportDescription] = useState("");
+  const isSearchActive = Boolean(searchQuery?.trim());
+
+  const fetchPollPage = useCallback(async (from) => {
+    return supabase
+      .from("polls")
+      .select(`*, poll_options (id, text, image_url, rating, votes)`)
+      .order("createdate", { ascending: false })
+      .range(from, from + POLL_PAGE_SIZE - 1);
+  }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem("rankr_user");
-    if (!saved) {
-      const guest = makeGuestUser();
-      localStorage.setItem("rankr_user", JSON.stringify(guest));
-      setCurrentUser(guest);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(saved);
-      setCurrentUser({ ...parsed, likes: parsed.likes || [] });
-    } catch {
-      const guest = makeGuestUser();
-      localStorage.setItem("rankr_user", JSON.stringify(guest));
-      setCurrentUser(guest);
-    }
-  }, [setCurrentUser]);
+    let isActive = true;
 
-  useEffect(() => {
     async function loadPolls() {
       setIsLoadingPolls(true);
       setLoadError("");
-      const { data, error } = await supabase
-        .from("polls")
-        .select(`*, poll_options (id, text, image_url, rating, votes)`)
-        .order("createdate", { ascending: false });
+      setNextPollOffset(0);
+      setHasMorePolls(true);
+      try {
+        initialPollPagePromise ||= withTimeout(
+          fetchPollPage(0).then(async ({ data, error }) => {
+            if (error) return { data: null, error };
+            const rows = data || [];
+            const profiledPolls = await applyCreatorProfilesToPolls(rows.map(normalizePoll));
+            return { data: rows, profiledPolls, error: null };
+          }),
+          POLL_LOAD_TIMEOUT_MS,
+          "Polls request timed out."
+        );
 
-      if (error) {
+        const { data, profiledPolls, error } = await initialPollPagePromise;
+        if (!isActive) return;
+
+        if (error) {
+          console.error("Error loading polls:", error);
+          initialPollPagePromise = null;
+          setLoadError(
+            `Polls could not be loaded. ${error.message || "Check the backend connection and try again."}`
+          );
+          setHasMorePolls(false);
+          return;
+        }
+        const rows = data || [];
+        setPolls(profiledPolls || []);
+        setNextPollOffset(rows.length);
+        setHasMorePolls(rows.length === POLL_PAGE_SIZE);
+      } catch (error) {
         console.error("Error loading polls:", error);
-        setLoadError("Polls could not be loaded. Check the backend connection and try again.");
-        setIsLoadingPolls(false);
-        return;
+        initialPollPagePromise = null;
+        if (!isActive) return;
+        setLoadError(
+          `Polls could not be loaded. ${error?.message || "Check the backend connection and try again."}`
+        );
+        setHasMorePolls(false);
+      } finally {
+        if (isActive) {
+          setIsLoadingPolls(false);
+        }
       }
-      setPolls((data || []).map(normalizePoll));
-      setIsLoadingPolls(false);
     }
     loadPolls();
-  }, [setPolls]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [fetchPollPage, setPolls]);
+
+  const loadMorePolls = useCallback(async () => {
+    if (
+      isFetchingMoreRef.current ||
+      isLoadingPolls ||
+      isSearchActive ||
+      !hasMorePolls
+    ) {
+      return;
+    }
+
+    isFetchingMoreRef.current = true;
+    setIsFetchingMorePolls(true);
+
+    let result;
+    try {
+      result = await withTimeout(
+        fetchPollPage(nextPollOffset),
+        POLL_LOAD_TIMEOUT_MS,
+        "More polls request timed out."
+      );
+    } catch (error) {
+      console.error("Error loading more polls:", error);
+      isFetchingMoreRef.current = false;
+      setIsFetchingMorePolls(false);
+      return;
+    }
+
+    const { data, error } = result;
+    if (error) {
+      console.error("Error loading more polls:", error);
+      isFetchingMoreRef.current = false;
+      setIsFetchingMorePolls(false);
+      return;
+    }
+
+    const rows = data || [];
+    const nextPolls = await applyCreatorProfilesToPolls(rows.map(normalizePoll));
+    setPolls((prev) => {
+      const existingIds = new Set(prev.map((poll) => String(poll.id)));
+      return [
+        ...prev,
+        ...nextPolls.filter((poll) => !existingIds.has(String(poll.id))),
+      ];
+    });
+    setNextPollOffset((value) => value + rows.length);
+    setHasMorePolls(rows.length === POLL_PAGE_SIZE);
+    isFetchingMoreRef.current = false;
+    setIsFetchingMorePolls(false);
+  }, [fetchPollPage, hasMorePolls, isLoadingPolls, isSearchActive, nextPollOffset, setPolls]);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || isLoadingPolls || isSearchActive || !hasMorePolls) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          loadMorePolls();
+        }
+      },
+      { rootMargin: "420px 0px", threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMorePolls, isLoadingPolls, isSearchActive, loadMorePolls]);
 
   useEffect(() => {
     if (!menuOpenFor) return;
@@ -184,10 +358,14 @@ export default function MultiPoll({
     let filtered = polls.filter((poll) => {
       if (!query) return true;
       if (filter === "polls") return poll.title?.toLowerCase().includes(query);
-      if (filter === "creators") return poll.creator?.toLowerCase().includes(query);
+      if (filter === "creators") {
+        return [poll.creatorUsername, poll.creatorName, poll.creator]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
+      }
       if (filter === "hashtags") return (poll.hashtags || []).some((tag) => tag.toLowerCase().includes(query));
       if (filter === "options") return (poll.options || []).some((o) => o.text?.toLowerCase().includes(query));
-      return [poll.title, poll.creator, ...(poll.hashtags || []), ...(poll.options || []).map((o) => o.text)]
+      return [poll.title, poll.creatorUsername, poll.creatorName, poll.creator, ...(poll.hashtags || []), ...(poll.options || []).map((o) => o.text)]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
@@ -216,13 +394,11 @@ export default function MultiPoll({
         : [...(currentUser.likes || []), pollId],
     };
     setCurrentUser(nextUser);
-    localStorage.setItem("rankr_user", JSON.stringify(nextUser));
     setPolls((prev) => prev.map((p) => (p.id === pollId ? { ...p, likes: nextLikes } : p)));
     const { error } = await supabase.from("polls").update({ likes: nextLikes }).eq("id", pollId);
     if (error) {
       console.error("Like update failed:", error);
       setCurrentUser(currentUser);
-      localStorage.setItem("rankr_user", JSON.stringify(currentUser));
       setPolls((prev) => prev.map((p) => (p.id === pollId ? { ...p, likes: poll.likes } : p)));
     }
   };
@@ -233,7 +409,7 @@ export default function MultiPoll({
       navigator.share({ title: poll.title, url });
     } else {
       navigator.clipboard.writeText(url);
-      alert("Link copied!");
+      setNoticeDialog({ title: "Link copied", message: "The poll link is ready to share." });
     }
   };
 
@@ -242,18 +418,70 @@ export default function MultiPoll({
     router.push(`/polls/${poll.id}`);
   };
 
-  const handleDelete = async (pollId) => {
-    if (!confirm("Delete this poll?")) return;
+  const handleDelete = (poll) => {
+    setMenuOpenFor(null);
+    setDeleteDialog({ poll, error: "" });
+  };
+
+  const handleCoverUpdated = (pollId, thumbnail) => {
+    setPolls((prev) =>
+      prev.map((poll) => (poll.id === pollId ? { ...poll, thumbnail } : poll))
+    );
+    setSelectedPoll((current) =>
+      current?.id === pollId ? { ...current, thumbnail } : current
+    );
+  };
+
+  const confirmDeletePoll = async () => {
+    const pollId = deleteDialog?.poll?.id;
+    if (!pollId) return;
+
     setDeletingPollId(pollId);
+    setDeleteDialog((current) => ({ ...current, error: "" }));
+
+    const [{ data: pollImageData, error: pollImageError }, { data: optionImageData, error: optionImageError }] =
+      await Promise.all([
+        supabase.from("polls").select("thumbnail").eq("id", pollId).maybeSingle(),
+        supabase.from("poll_options").select("image_url").eq("poll_id", pollId),
+      ]);
+
+    if (pollImageError || optionImageError) {
+      console.warn("Could not fetch poll images for cleanup:", pollImageError || optionImageError);
+    } else {
+      const imagePaths = [
+        getStoragePathFromPublicUrl(pollImageData?.thumbnail),
+        ...(optionImageData || []).map((option) =>
+          getStoragePathFromPublicUrl(option.image_url)
+        ),
+      ].filter(Boolean);
+      const uniqueImagePaths = [...new Set(imagePaths)];
+
+      if (uniqueImagePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from(POLL_IMAGES_BUCKET)
+          .remove(uniqueImagePaths);
+
+        if (storageError) {
+          console.warn("Poll image cleanup failed:", storageError);
+        }
+      }
+    }
+
     const { error: optionsError } = await supabase.from("poll_options").delete().eq("poll_id", pollId);
     if (optionsError) {
-      alert("Could not delete poll options.");
+      setDeleteDialog((current) => ({
+        ...current,
+        error: "Could not delete poll options. Please try again.",
+      }));
       setDeletingPollId(null);
       return;
     }
     const { error: pollError } = await supabase.from("polls").delete().eq("id", pollId);
     if (pollError) {
-      alert("Could not delete this poll.");
+      setDeleteDialog((current) => ({
+        ...current,
+        error: "Could not delete this poll. Please try again.",
+      }));
       setDeletingPollId(null);
       return;
     }
@@ -261,13 +489,17 @@ export default function MultiPoll({
     setMenuOpenFor(null);
     setEditingPoll(null);
     setDeletingPollId(null);
+    setDeleteDialog(null);
   };
 
   const handleReport = (poll) => {
     const reports = JSON.parse(localStorage.getItem("rankr_reports") || "[]");
     const alreadyReported = reports.some((r) => r.pollId === poll.id && r.userId === currentUser?.id);
     if (alreadyReported) {
-      alert("You already reported this poll.");
+      setNoticeDialog({
+        title: "Already reported",
+        message: "You already reported this poll. Thanks for helping keep Rogue Rank fair.",
+      });
       setMenuOpenFor(null);
       return;
     }
@@ -283,7 +515,7 @@ export default function MultiPoll({
     setReportReason(REPORT_REASONS[0]);
   };
 
-  const handleDraftReport = () => {
+  const handleDraftReport = async () => {
     if (!reportPoll) return;
 
     const pollUrl = `${window.location.origin}/polls/${reportPoll.id}`;
@@ -300,6 +532,15 @@ export default function MultiPoll({
       `Creator: ${reportPoll.creator || "Unknown"}`,
       pollUrl,
     ].join("\n");
+
+    const { error: reportError } = await persistPollReport(
+      reportPoll.id,
+      reportReason,
+      currentUser?.id
+    );
+    if (reportError) {
+      console.error("Poll report save failed:", reportError);
+    }
 
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(REPORT_EMAIL)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(gmailUrl, "_blank", "noopener,noreferrer");
@@ -349,7 +590,10 @@ export default function MultiPoll({
         throw optionsError;
       }
 
-      const normalized = normalizePoll({ ...poll, creatorid: poll.creatorId, createdate, total_votes: poll.total_votes ?? 0 });
+      const normalized = {
+        ...normalizePoll({ ...poll, creatorid: poll.creatorId, createdate, total_votes: poll.total_votes ?? 0 }),
+        creatorUsername: getPollCreatorUsername(poll),
+      };
       setShowCreator(false);
       setEditingPoll(null);
       setPolls((prev) => editingPoll ? prev.map((item) => (item.id === poll.id ? normalized : item)) : [normalized, ...prev]);
@@ -367,13 +611,13 @@ export default function MultiPoll({
           <div className={styles.heroSection}>
             <div className={styles.heroContent}>
               <span className={styles.heroBadge}>Rogue Rank</span>
-              <h1 className={styles.heroTitle}>Find the crowd favorite, one matchup at a time.</h1>
+              <h1 className={styles.heroTitle}>Find the <span>crowd favorite</span>, one matchup at a time.</h1>
               <p className={styles.heroSub}>Rogue Rank turns polls into live rankings. Create a set, vote through head-to-head choices, and watch the strongest options rise.</p>
             </div>
             <div className={styles.heroStats}>
-              <div className={styles.statBox}><strong>{formatCount(polls.length)}</strong><span>polls</span></div>
-              <div className={styles.statBox}><strong>{formatCount(totalVotes)}</strong><span>total votes</span></div>
-              <div className={styles.statBox}><strong>{formatCount(totalOptions)}</strong><span>options</span></div>
+              <div className={styles.statBox}><span className={styles.statIcon}><HeroStatIcon name="polls" /></span><strong>{formatCount(polls.length)}</strong><span>polls</span></div>
+              <div className={styles.statBox}><span className={styles.statIcon}><HeroStatIcon name="votes" /></span><strong>{formatCount(totalVotes)}</strong><span>total votes</span></div>
+              <div className={styles.statBox}><span className={styles.statIcon}><HeroStatIcon name="options" /></span><strong>{formatCount(totalOptions)}</strong><span>options</span></div>
             </div>
           </div>
 
@@ -388,7 +632,7 @@ export default function MultiPoll({
                 <div className={styles.trendingMeta}>
                   <h2 className={styles.trendingTitle}>{trendingPoll.title}</h2>
                   <p className={styles.trendingCreator}>
-                    by <Link href={getCreatorHref(trendingPoll)} className={styles.creatorLink}>{trendingPoll.creator}</Link>
+                    by <Link href={getCreatorHref(trendingPoll)} className={styles.creatorLink}>{getPollCreatorHandle(trendingPoll)}</Link>
                   </p>
                   <div className={styles.trendingTags}>
                     {(trendingPoll.hashtags || []).slice(0, 3).map((tag) => (
@@ -419,76 +663,34 @@ export default function MultiPoll({
 
           {/* CARD GRID */}
           <section className={styles.cardGrid}>
-            {sortedPolls.map((poll) => {
-              const liked = currentUser?.likes?.includes(poll.id);
-              const canManage = currentUser?.id === poll.creatorId || (!poll.creatorId && currentUser?.username === poll.creator);
-              const isDeleting = deletingPollId === poll.id;
-              const voteCount = poll.total_votes ?? poll.options.reduce((sum, option) => sum + (option.votes || 0), 0);
-              const thumbnail = getPollThumbnail(poll);
-
-              return (
-                <article key={poll.id} className={styles.pollCard}>
-                  {/* ✅ THUMBNAIL */}
-                  <div className={styles.cardThumb} onClick={() => openPoll(poll)} style={{ cursor: "pointer" }}>
-                    {thumbnail ? (
-                      <img src={thumbnail} alt={poll.title} className={styles.cardThumbImg} />
-                    ) : (
-                      <div className={styles.cardThumbPlaceholder}>
-                        {poll.title?.[0]?.toUpperCase() || "?"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={styles.cardTop}>
-                    <div className={styles.cardTitleGroup}>
-                      <strong className={styles.cardTitle}>{poll.title}</strong>
-                      <span className={styles.cardCreator}>
-                        by <Link href={getCreatorHref(poll)} className={styles.creatorLink}>{poll.creator}</Link>
-                      </span>
-                      <span className={styles.cardCreatedAt}>{formatTimeAgo(poll.createdAt || poll.createdate)}</span>
-                    </div>
-                    <div className={styles.menuWrap}>
-                      <button onClick={(e) => { e.stopPropagation(); setMenuOpenFor(menuOpenFor === poll.id ? null : poll.id); }} className={styles.iconButton} aria-label="Poll actions">•••</button>
-                      {menuOpenFor === poll.id && (
-                        <div className={styles.menu}>
-                          <button onClick={(e) => { e.stopPropagation(); handleReport(poll); }}>⚠ Report</button>
-                          {canManage && (
-                            <button className={styles.dangerItem} disabled={isDeleting} onClick={(e) => { e.stopPropagation(); handleDelete(poll.id); }}>
-                              🗑 {isDeleting ? "Deleting..." : "Delete poll"}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ✅ ALL HASHTAGS visible — no truncation */}
-                  {poll.hashtags?.length > 0 && (
-                    <div className={styles.tagRow}>
-                      {poll.hashtags.map((tag) => (
-                        <Link key={tag} href={getHashtagHref(tag)} className={styles.tag}>#{tag}</Link>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className={styles.cardStats}>
-                    <span>{formatCount(poll.options.length)} options</span>
-                    <span>{formatCount(voteCount)} votes</span>
-                    <span>{formatCount(poll.likes)} likes</span>
-                  </div>
-
-                  <div className={styles.cardBottom}>
-                    <button className={styles.cardButton} onClick={() => openPoll(poll)}>Vote / View</button>
-                    <button className={styles.cardButtonShare} onClick={() => handleShare(poll)}>Share</button>
-                    {/* ✅ LIKE — empty → filled red */}
-                    <button className={`${styles.cardButtonLike} ${liked ? styles.liked : ""}`} onClick={() => handleLikeToggle(poll.id)} aria-label="Like">
-                      {liked ? "♥" : "♡"}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
+            {sortedPolls.map((poll) => (
+              <PollGridCard
+                key={poll.id}
+                poll={poll}
+                currentUser={currentUser}
+                menuOpen={menuOpenFor === poll.id}
+                isDeleting={deletingPollId === poll.id}
+                onOpen={openPoll}
+                onShare={handleShare}
+                onLikeToggle={handleLikeToggle}
+                onMenuToggle={(pollId) => setMenuOpenFor(menuOpenFor === pollId ? null : pollId)}
+                onReport={handleReport}
+                onDelete={handleDelete}
+                onCoverUpdated={handleCoverUpdated}
+              />
+            ))}
+            {isFetchingMorePolls && !isSearchActive && (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={`feed-skeleton-${index}`} className={styles.feedSkeletonCard} aria-hidden="true" />
+                ))}
+              </>
+            )}
           </section>
+          <div ref={loadMoreRef} className={styles.feedSentinel} aria-hidden="true" />
+          {!isLoadingPolls && !isSearchActive && !hasMorePolls && polls.length > 0 && (
+            <div className={styles.feedEndMessage}>You've reached the end.</div>
+          )}
         </>
       )}
 
@@ -501,6 +703,8 @@ export default function MultiPoll({
 
       {selectedPoll && (
         <PairPoll poll={selectedPoll} onBack={() => setSelectedPoll(null)}
+          currentUser={currentUser}
+          setCurrentUser={setCurrentUser}
           onUpdate={(updatedPoll) => {
             setSelectedPoll((current) => current?.id === updatedPoll.id ? { ...current, ...updatedPoll } : current);
             setPolls((prev) => prev.map((poll) => poll.id === updatedPoll.id ? { ...poll, options: updatedPoll.options, total_votes: updatedPoll.total_votes } : poll));
@@ -548,6 +752,34 @@ export default function MultiPoll({
           </div>
         </div>
       )}
+
+      <ThemedModal
+        open={Boolean(deleteDialog)}
+        title="Delete poll?"
+        tone="danger"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        showCancel
+        isBusy={Boolean(deletingPollId)}
+        error={deleteDialog?.error}
+        onCancel={() => {
+          if (deletingPollId) return;
+          setDeleteDialog(null);
+        }}
+        onConfirm={confirmDeletePoll}
+      >
+        <p>This will permanently delete:</p>
+        <p className="themedModalPollTitle">{deleteDialog?.poll?.title || "Untitled poll"}</p>
+        <p className="themedModalWarning">This cannot be undone.</p>
+      </ThemedModal>
+
+      <ThemedModal
+        open={Boolean(noticeDialog)}
+        title={noticeDialog?.title}
+        message={noticeDialog?.message}
+        confirmLabel="OK"
+        onConfirm={() => setNoticeDialog(null)}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 // app/layout.js
 import "../styles/globals.css";
+import Script from "next/script";
 import Footer from "./components/Footer";
 
 export default function RootLayout({ children }) {
@@ -7,33 +8,37 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         {/* ✅ Ezoic Privacy Scripts (must be first) */}
-        <script
+        <Script
           data-cfasync="false"
           src="https://cmp.gatekeeperconsent.com/min.js"
-        ></script>
-        <script
+          strategy="afterInteractive"
+        />
+        <Script
           data-cfasync="false"
           src="https://the.gatekeeper.com/cmp.min.js"
-        ></script>
+          strategy="afterInteractive"
+        />
 
         {/* ✅ Ezoic Header Script (initializes ad system) */}
-        <script async src="https://www.ezojs.com/ezoic/sa.min.js"></script>
-        <script>
-          {`
-            window.ezstandalone = window.ezstandalone || {};
-            ezstandalone.cmd = ezstandalone.cmd || [];
-          `}
-        </script>
+        <Script src="https://www.ezojs.com/ezoic/sa.min.js" strategy="afterInteractive" />
+        <Script
+          id="ezoic-standalone-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.ezstandalone=window.ezstandalone||{};window.ezstandalone.cmd=window.ezstandalone.cmd||[];",
+          }}
+        />
 
         {/* ✅ Ezoic Analytics */}
-        <script src="https://ezoicanalytics.com/analytics.js"></script>
+        <Script src="https://ezoicanalytics.com/analytics.js" strategy="afterInteractive" />
       </head>
       <body style={{
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#0f172a",
-        color: "#e6eef8",
+        background: "var(--color-bg)",
+        color: "var(--color-text)",
         margin: 0,
         fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial"
       }}>
