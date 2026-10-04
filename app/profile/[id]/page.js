@@ -1,6 +1,8 @@
 "use client";
+
 import { useParams, useRouter } from "next/navigation";
 import ProfilePage from "../../components/ProfilePage";
+import styles from "./ProfileRoute.module.css";
 
 export default function ProfileRoute() {
   const params = useParams();
@@ -8,20 +10,13 @@ export default function ProfileRoute() {
   const router = useRouter();
 
   return (
-    <main style={{ padding: 24 }}>
+    <main className={styles.profileRoute}>
       <button
         onClick={() => router.back()}
-        style={{
-          background: "#0ea5e9",
-          border: "none",
-          color: "#001218",
-          padding: "6px 12px",
-          borderRadius: 8,
-          cursor: "pointer",
-          marginBottom: 16,
-        }}
+        className={styles.backButton}
+        type="button"
       >
-        ← Back
+        Back
       </button>
 
       <ProfilePage userId={id} />

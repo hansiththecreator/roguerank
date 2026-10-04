@@ -1,0 +1,37 @@
+.profileRoute {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.backButton {
+  min-height: 40px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 8px;
+  background: rgba(14, 165, 233, 0.1);
+  color: #7dd3fc;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.backButton:hover,
+.backButton:focus-visible {
+  border-color: #38bdf8;
+  color: #e6eef8;
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .profileRoute {
+    padding: 12px;
+  }
+
+  .backButton {
+    width: 100%;
+    min-height: 44px;
+  }
+}

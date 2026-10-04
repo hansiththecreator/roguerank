@@ -186,7 +186,7 @@ export default function LeftMenu({
                     <div className={styles.pollInfo}>
                       <h4 className={styles.pollTitle}>{poll.title}</h4>
                       <p className={styles.pollMeta}>
-                        {poll.options?.length || 0} options · {poll.total_votes || 0} votes
+                        {poll.options?.length || 0} options / {poll.total_votes || 0} votes
                       </p>
                     </div>
                   </button>
@@ -223,7 +223,7 @@ export default function LeftMenu({
                     <div className={styles.pollInfo}>
                       <h4 className={styles.pollTitle}>{poll.title}</h4>
                       <p className={styles.pollMeta}>
-                        {poll.options?.length || 0} options Â· {poll.total_votes || 0} votes
+                        {poll.options?.length || 0} options / {poll.total_votes || 0} votes
                       </p>
                     </div>
                   </button>
@@ -259,7 +259,7 @@ export default function LeftMenu({
                     <div className={styles.pollInfo}>
                       <h4 className={styles.pollTitle}>{poll.title}</h4>
                       <p className={styles.pollMeta}>
-                        {poll.options?.length || 0} options · {poll.total_votes || 0} votes
+                        {poll.options?.length || 0} options / {poll.total_votes || 0} votes
                       </p>
                     </div>
                   </button>
