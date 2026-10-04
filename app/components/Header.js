@@ -368,7 +368,9 @@ export default function Header({
             {isCurrentUserLoading ? (
               <div className={styles.profileCircleSkeleton} aria-hidden="true" />
             ) : pfp ? (
-              <img src={pfp} alt="Profile" className={styles.profileCircleImg} />
+              <div className={styles.profileCircle}>
+                <img src={pfp} alt="Profile" className={styles.profileCircleImg} />
+              </div>
             ) : (
               <div className={styles.profileCircle}>
                 {username ? username[0].toUpperCase() : "G"}
