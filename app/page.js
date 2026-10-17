@@ -1,3 +1,4 @@
+// app/page.js
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,6 +10,7 @@ import PairPoll from "./components/PairPoll";
 import PollCreator from "./components/PollCreator";
 import { useCurrentUser } from "./hooks/useCurrentUser";
 import pageStyles from "./page.module.css";
+import { supabase } from "./lib/supabaseClient";
 
 export default function Home() {
   const router = useRouter();
