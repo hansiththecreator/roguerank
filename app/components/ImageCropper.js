@@ -4,19 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./ImageCropper.module.css";
 import ThemedModal from "./ThemedModal";
 import { makePollImagePath, uploadPollImage } from "../lib/storageImages";
+import { POLL_IMAGE_ASPECT_RATIO } from "../lib/pollImageFrame";
 
 const OUTPUT_WIDTH = 1280;
-const OUTPUT_HEIGHT = 1280;
+const OUTPUT_HEIGHT = Math.round(OUTPUT_WIDTH / POLL_IMAGE_ASPECT_RATIO);
+const MAX_ZOOM = 4;
 
-export default function ImageCropper({
-  imageSrc,
-  onCropComplete,
-  onCancel,
-  forThumbnail,
-}) {
+export default function ImageCropper({ imageSrc, onCropComplete, onCancel, forThumbnail }) {
   const stageRef = useRef(null);
   const imageRef = useRef(null);
   const dragRef = useRef(null);
+  const pointersRef = useRef(new Map());
+  const pinchRef = useRef(null);
   const [imageMeta, setImageMeta] = useState(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -27,16 +26,12 @@ export default function ImageCropper({
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-
     const updateSize = () => {
-      const rect = stage.getBoundingClientRect();
-      setStageSize({ width: rect.width, height: rect.height });
+      setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
     };
-
     updateSize();
     const observer = new ResizeObserver(updateSize);
     observer.observe(stage);
-
     return () => observer.disconnect();
   }, []);
 
@@ -45,17 +40,30 @@ export default function ImageCropper({
     setZoom(1);
   }, [imageSrc]);
 
-  const getImageLayout = () => {
-    if (!imageMeta || !stageSize.width || !stageSize.height) return null;
+  const getCoverScale = () => {
+    if (!imageMeta || !stageSize.width || !stageSize.height) return 0;
+    return Math.max(stageSize.width / imageMeta.width, stageSize.height / imageMeta.height);
+  };
 
-    const coverScale = Math.max(
-      stageSize.width / imageMeta.width,
-      stageSize.height / imageMeta.height
-    );
+  const clampPosition = (nextPosition, nextZoom = zoom) => {
+    const coverScale = getCoverScale();
+    if (!coverScale) return nextPosition;
+    const width = imageMeta.width * coverScale * nextZoom;
+    const height = imageMeta.height * coverScale * nextZoom;
+    const maxX = Math.max(0, (width - stageSize.width) / 2);
+    const maxY = Math.max(0, (height - stageSize.height) / 2);
+    return {
+      x: Math.min(maxX, Math.max(-maxX, nextPosition.x)),
+      y: Math.min(maxY, Math.max(-maxY, nextPosition.y)),
+    };
+  };
+
+  const getImageLayout = () => {
+    const coverScale = getCoverScale();
+    if (!coverScale) return null;
     const scale = coverScale * zoom;
     const width = imageMeta.width * scale;
     const height = imageMeta.height * scale;
-
     return {
       scale,
       width,
@@ -65,98 +73,66 @@ export default function ImageCropper({
     };
   };
 
-  const clampPosition = (nextPosition, nextZoom = zoom) => {
-    if (!imageMeta || !stageSize.width || !stageSize.height) return nextPosition;
-
-    const coverScale = Math.max(
-      stageSize.width / imageMeta.width,
-      stageSize.height / imageMeta.height
-    );
-    const width = imageMeta.width * coverScale * nextZoom;
-    const height = imageMeta.height * coverScale * nextZoom;
-    const maxX = Math.max(0, (width - stageSize.width) / 2);
-    const maxY = Math.max(0, (height - stageSize.height) / 2);
-
-    return {
-      x: Math.min(maxX, Math.max(-maxX, nextPosition.x)),
-      y: Math.min(maxY, Math.max(-maxY, nextPosition.y)),
-    };
-  };
-
   const renderCrop = () => {
     const img = imageRef.current;
     const layout = getImageLayout();
     if (!img || !layout) return Promise.resolve(null);
-
     const canvas = document.createElement("canvas");
     canvas.width = OUTPUT_WIDTH;
     canvas.height = OUTPUT_HEIGHT;
-
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#071127";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     const sourceX = Math.max(0, -layout.left / layout.scale);
     const sourceY = Math.max(0, -layout.top / layout.scale);
-    const sourceWidth = Math.min(
-      imageMeta.width - sourceX,
-      stageSize.width / layout.scale
-    );
-    const sourceHeight = Math.min(
-      imageMeta.height - sourceY,
-      stageSize.height / layout.scale
-    );
-
-    const destX = layout.left > 0 ? (layout.left / stageSize.width) * OUTPUT_WIDTH : 0;
-    const destY = layout.top > 0 ? (layout.top / stageSize.height) * OUTPUT_HEIGHT : 0;
-    const destWidth = (sourceWidth * layout.scale / stageSize.width) * OUTPUT_WIDTH;
-    const destHeight = (sourceHeight * layout.scale / stageSize.height) * OUTPUT_HEIGHT;
-
-    ctx.drawImage(
-      img,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      destX,
-      destY,
-      destWidth,
-      destHeight
-    );
-
-    return new Promise((resolve) => {
-      canvas.toBlob(resolve, "image/jpeg", 0.92);
-    });
+    const sourceWidth = Math.min(imageMeta.width - sourceX, stageSize.width / layout.scale);
+    const sourceHeight = Math.min(imageMeta.height - sourceY, stageSize.height / layout.scale);
+    ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
   };
 
   const handlePointerDown = (event) => {
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = {
-      x: event.clientX,
-      y: event.clientY,
-      startX: position.x,
-      startY: position.y,
-    };
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size >= 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      pinchRef.current = { distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), zoom };
+      dragRef.current = null;
+      return;
+    }
+    dragRef.current = { x: event.clientX, y: event.clientY, startX: position.x, startY: position.y };
   };
 
   const handlePointerMove = (event) => {
+    if (!pointersRef.current.has(event.pointerId)) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size >= 2 && pinchRef.current) {
+      const [a, b] = [...pointersRef.current.values()];
+      const distance = Math.hypot(b.x - a.x, b.y - a.y);
+      const nextZoom = Math.max(1, Math.min(MAX_ZOOM, pinchRef.current.zoom * distance / pinchRef.current.distance));
+      setZoom(nextZoom);
+      setPosition((current) => clampPosition(current, nextZoom));
+      return;
+    }
     if (!dragRef.current) return;
-
-    setPosition(
-      clampPosition({
-        x: dragRef.current.startX + event.clientX - dragRef.current.x,
-        y: dragRef.current.startY + event.clientY - dragRef.current.y,
-      })
-    );
+    setPosition(clampPosition({
+      x: dragRef.current.startX + event.clientX - dragRef.current.x,
+      y: dragRef.current.startY + event.clientY - dragRef.current.y,
+    }));
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (event) => {
+    pointersRef.current.delete(event.pointerId);
+    pinchRef.current = null;
     dragRef.current = null;
+    if (pointersRef.current.size === 1) {
+      const [pointer] = pointersRef.current.values();
+      dragRef.current = { x: pointer.x, y: pointer.y, startX: position.x, startY: position.y };
+    }
   };
 
   const handleZoom = (delta) => {
     setZoom((value) => {
-      const nextZoom = Math.max(1, Math.min(4, Number((value + delta).toFixed(2))));
+      const nextZoom = Math.max(1, Math.min(MAX_ZOOM, Number((value + delta).toFixed(2))));
       setPosition((current) => clampPosition(current, nextZoom));
       return nextZoom;
     });
@@ -170,7 +146,6 @@ export default function ImageCropper({
   const handleCrop = async () => {
     if (isUploading) return;
     setIsUploading(true);
-
     try {
       const crop = await renderCrop();
       if (!crop) throw new Error("Could not crop this image.");
@@ -185,124 +160,56 @@ export default function ImageCropper({
   };
 
   const layout = getImageLayout();
-  const previewPosition = {
-    x: `${Math.max(0, Math.min(100, 50 - (position.x / Math.max(stageSize.width, 1)) * 70))}%`,
-    y: `${Math.max(0, Math.min(100, 50 - (position.y / Math.max(stageSize.height, 1)) * 70))}%`,
-  };
-  const previewStyle = {
-    objectPosition: `${previewPosition.x} ${previewPosition.y}`,
-    transform: `scale(${Math.min(1.24, Math.max(1, zoom * 0.18 + 0.88))})`,
-  };
-
   return (
     <div className={styles.cropperOverlay}>
       <div className={styles.cropperBox}>
         <div className={styles.cropperHeader}>
           <div>
-            <h2 className={styles.cropperTitle}>
-              Crop {forThumbnail ? "Poll Cover" : "Option Image"}
-            </h2>
-            <p className={styles.cropperHint}>
-              Make your image look great on desktop and mobile.
-            </p>
+            <h2 className={styles.cropperTitle}>Crop {forThumbnail ? "Poll Cover" : "Option Image"}</h2>
+            <p className={styles.cropperHint}>Drag to position. Use the buttons, scroll, or pinch to zoom.</p>
           </div>
-          <button className={styles.closeBtn} onClick={onCancel} type="button">
-            Close
-          </button>
+          <button className={styles.closeBtn} onClick={onCancel} type="button">Close</button>
         </div>
-
-        <div className={styles.cropperGrid}>
-          <div>
-            <div
-              ref={stageRef}
-              className={styles.stage}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              onWheel={(event) => {
-                event.preventDefault();
-                handleZoom(event.deltaY > 0 ? -0.08 : 0.08);
-              }}
-            >
-              <img
-                ref={imageRef}
-                src={imageSrc}
-                alt=""
-                className={styles.sourceImage}
-                draggable={false}
-                onLoad={(event) => {
-                  setImageMeta({
-                    width: event.currentTarget.naturalWidth,
-                    height: event.currentTarget.naturalHeight,
-                  });
-                }}
-                style={
-                  layout
-                    ? {
-                        width: `${layout.width}px`,
-                        height: `${layout.height}px`,
-                        transform: `translate(${layout.left}px, ${layout.top}px)`,
-                      }
-                    : undefined
-                }
-              />
-              <div className={styles.frameOverlay} />
-              <div className={styles.safeArea} />
-            </div>
-
-            <div className={styles.controls}>
-              <button className={styles.zoomBtn} onClick={() => handleZoom(-0.15)} type="button">
-                Zoom Out
-              </button>
-              <span className={styles.zoomLevel}>{Math.round(zoom * 100)}%</span>
-              <button className={styles.zoomBtn} onClick={() => handleZoom(0.15)} type="button">
-                Zoom In
-              </button>
-              <button className={styles.resetBtn} onClick={handleReset} type="button">
-                Reset crop
-              </button>
-            </div>
+        <div className={styles.cropperWorkArea}>
+          <div
+            ref={stageRef}
+            className={styles.stage}
+            style={{ aspectRatio: POLL_IMAGE_ASPECT_RATIO }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onLostPointerCapture={handlePointerUp}
+            onWheel={(event) => { event.preventDefault(); handleZoom(event.deltaY > 0 ? -0.08 : 0.08); }}
+          >
+            <img
+              ref={imageRef}
+              src={imageSrc}
+              alt=""
+              className={styles.sourceImage}
+              draggable={false}
+              onLoad={(event) => setImageMeta({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+              style={layout ? {
+                width: `${layout.width}px`,
+                height: `${layout.height}px`,
+                transform: `translate(${layout.left}px, ${layout.top}px)`,
+              } : undefined}
+            />
           </div>
-
-          <div className={styles.previewPane} aria-label="Crop previews">
-            <h3 className={styles.previewTitle}>Preview</h3>
-            <p className={styles.previewHint}>One crop, two live card ratios.</p>
-
-            <div className={styles.previewCards}>
-              <div className={styles.previewCard}>
-                <span>Desktop</span>
-                <div className={`${styles.previewImageFrame} ${styles.desktopPreview}`}>
-                  <img src={imageSrc} alt="" style={previewStyle} />
-                </div>
-                <strong>Option image</strong>
-              </div>
-
-              <div className={styles.previewCard}>
-                <span>Mobile</span>
-                <div className={`${styles.previewImageFrame} ${styles.mobilePreview}`}>
-                  <img src={imageSrc} alt="" style={previewStyle} />
-                </div>
-                <strong>Option image</strong>
-              </div>
-            </div>
-
-            <p className={styles.safeHint}>
-              Keep the subject inside the inner guide so it survives tighter mobile crops.
-            </p>
+          <div className={styles.controls}>
+            <button className={styles.zoomBtn} onClick={() => handleZoom(-0.15)} type="button">Zoom Out</button>
+            <span className={styles.zoomLevel}>{Math.round(zoom * 100)}%</span>
+            <button className={styles.zoomBtn} onClick={() => handleZoom(0.15)} type="button">Zoom In</button>
+            <button className={styles.resetBtn} onClick={handleReset} type="button">Reset</button>
           </div>
         </div>
-
         <div className={styles.cropperActions}>
           <button className={styles.cropBtn} onClick={handleCrop} type="button" disabled={isUploading}>
             {isUploading ? "Uploading..." : "Crop & Done"}
           </button>
-          <button className={styles.cancelBtn} onClick={onCancel} type="button" disabled={isUploading}>
-            Cancel
-          </button>
+          <button className={styles.cancelBtn} onClick={onCancel} type="button" disabled={isUploading}>Cancel</button>
         </div>
       </div>
-
       <ThemedModal
         open={Boolean(noticeDialog)}
         title={noticeDialog?.title}

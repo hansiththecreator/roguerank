@@ -6,6 +6,7 @@ import styles from "./PairPoll.module.css";
 import ThemedModal from "./ThemedModal";
 import { updateElo } from "../utils/elo";
 import { getPollCreatorHandle } from "../lib/creatorProfiles";
+import { POLL_IMAGE_ASPECT_RATIO } from "../lib/pollImageFrame";
 import { supabase } from "../lib/supabaseClient";
 import {
   addComment,
@@ -237,7 +238,7 @@ function ContenderCard({ option, rank, side, disabled, onVote }) {
         onClick={handleClick}
         aria-label={`Vote for ${option.text || sideLabel}`}
       >
-        <div className={styles.imageStage}>
+        <div className={styles.imageStage} style={{ aspectRatio: POLL_IMAGE_ASPECT_RATIO }}>
           {rank ? <span className={styles.rankBadge}>#{rank}</span> : null}
           {option.image ? (
             <img src={option.image} alt={option.text || sideLabel} className={styles.optionImg} />

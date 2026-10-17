@@ -154,8 +154,8 @@ export default function MyPollsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("all");
 
-  const loadPolls = useCallback(async () => {
-    setIsLoading(true);
+  const loadPolls = useCallback(async ({ showLoading = true } = {}) => {
+    if (showLoading) setIsLoading(true);
     setLoadError("");
 
     const { data, error } = await supabase
@@ -166,12 +166,12 @@ export default function MyPollsPage() {
     if (error) {
       console.error("Error loading my polls:", error);
       setLoadError("Your polls could not be loaded.");
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
       return;
     }
 
     setPolls(await applyCreatorProfilesToPolls((data || []).map(normalizePoll)));
-    setIsLoading(false);
+    if (showLoading) setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -180,7 +180,7 @@ export default function MyPollsPage() {
 
   useEffect(() => {
     function handleFocus() {
-      loadPolls();
+      loadPolls({ showLoading: false });
     }
 
     window.addEventListener("focus", handleFocus);
