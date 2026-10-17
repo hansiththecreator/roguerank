@@ -223,7 +223,8 @@ export default function MultiPoll({
       setNextPollOffset(0);
       setHasMorePolls(true);
       try {
-        initialPollPagePromise ||= withTimeout(
+        if (!initialPollPagePromise) {
+          initialPollPagePromise = withTimeout(
           fetchPollPage(0).then(async ({ data, error }) => {
             if (error) return { data: null, error };
             const rows = data || [];
@@ -232,7 +233,17 @@ export default function MultiPoll({
           }),
           POLL_LOAD_TIMEOUT_MS,
           "Polls request timed out."
-        );
+          ).then(
+            (result) => {
+              initialPollPagePromise = null;
+              return result;
+            },
+            (error) => {
+              initialPollPagePromise = null;
+              throw error;
+            }
+          );
+        }
 
         const { data, profiledPolls, error } = await initialPollPagePromise;
         if (!isActive) return;

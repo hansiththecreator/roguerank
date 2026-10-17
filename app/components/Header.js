@@ -7,6 +7,7 @@ import styles from "./styles.module.css";
 import ThemedModal from "./ThemedModal";
 import { isUsernameAvailable, upsertUserProfile } from "../lib/pollEngagement";
 import { makePollImagePath, uploadPollImage } from "../lib/storageImages";
+import { supabase } from "../lib/supabaseClient";
 
 const PROFILE_IMAGE_MAX_MB = 1;
 const MB = 1024 * 1024;
@@ -45,15 +46,6 @@ function formatJoinedDate(timestamp) {
 
   const years = Math.floor(days / 365);
   return years === 1 ? "Joined 1 year ago" : `Joined ${years} years ago`;
-}
-
-function readJsonArray(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
 }
 
 function makeProfileImagePath(userId) {
@@ -175,13 +167,32 @@ export default function Header({
   useEffect(() => {
     if (!isModalOpen) return;
 
-    const createdPolls = readJsonArray("rankr_created_polls");
-    const visitedPolls = readJsonArray("rankr_visited_polls");
+    let isActive = true;
     setProfileStats({
-      created: createdPolls.length,
-      votesCast: visitedPolls.length,
+      created: 0,
+      votesCast: 0,
       likesGiven: currentUser?.likes?.length || 0,
     });
+    if (!currentUser?.id) return () => { isActive = false; };
+    async function loadProfileStats() {
+      const [createdResult, votesResult] = await Promise.all([
+        supabase.from("polls").select("id", { count: "exact", head: true }).eq("creatorid", currentUser.id),
+        supabase.from("poll_votes").select("id", { count: "exact", head: true }).eq("user_id", currentUser.id),
+      ]);
+      if (!isActive) return;
+      if (createdResult.error) console.error("Created polls count failed:", createdResult.error);
+      if (votesResult.error) console.error("Votes cast count failed:", votesResult.error);
+      setProfileStats((stats) => ({
+        ...stats,
+        created: createdResult.error ? 0 : createdResult.count ?? 0,
+        votesCast: votesResult.error ? 0 : votesResult.count ?? 0,
+      }));
+    }
+    loadProfileStats().catch((error) => {
+      console.error("Profile stats loading failed:", error);
+      if (isActive) setProfileStats((stats) => ({ ...stats, created: 0, votesCast: 0 }));
+    });
+    return () => { isActive = false; };
   }, [isModalOpen, currentUser]);
 
   const buildUpdatedUser = (overrides = {}) => ({
