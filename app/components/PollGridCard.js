@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import ImageCropper from "./ImageCropper";
 import ThemedModal from "./ThemedModal";
@@ -115,12 +116,26 @@ export default function PollGridCard({
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const [noticeDialog, setNoticeDialog] = useState(null);
   const [createdAtLabel, setCreatedAtLabel] = useState("Created recently");
+  const [isMounted, setIsMounted] = useState(false);
   const liked = currentUser?.likes?.includes(poll.id);
   const canManage =
     currentUser?.id === poll.creatorId || (!poll.creatorId && currentUser?.username === poll.creator);
   const voteCount =
     poll.total_votes ?? (poll.options || []).reduce((sum, option) => sum + (option.votes || 0), 0);
   const thumbnail = getPollThumbnail(poll);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!noticeDialog || !isMounted) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [noticeDialog, isMounted]);
 
   useEffect(() => {
     return () => {
@@ -318,13 +333,16 @@ export default function PollGridCard({
         />
       )}
 
-      <ThemedModal
-        open={Boolean(noticeDialog)}
-        title={noticeDialog?.title}
-        message={noticeDialog?.message}
-        confirmLabel="OK"
-        onConfirm={() => setNoticeDialog(null)}
-      />
+      {isMounted && noticeDialog && createPortal(
+        <ThemedModal
+          open
+          title={noticeDialog.title}
+          message={noticeDialog.message}
+          confirmLabel="OK"
+          onConfirm={() => setNoticeDialog(null)}
+        />,
+        document.body
+      )}
     </article>
   );
 }

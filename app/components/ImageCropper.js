@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./ImageCropper.module.css";
 import ThemedModal from "./ThemedModal";
 import { makePollImagePath, uploadPollImage } from "../lib/storageImages";
@@ -22,18 +23,36 @@ export default function ImageCropper({ imageSrc, onCropComplete, onCancel, forTh
   const [zoom, setZoom] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
   const [noticeDialog, setNoticeDialog] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMounted]);
+
+  const measureStage = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    const updateSize = () => {
-      setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
-    };
-    updateSize();
-    const observer = new ResizeObserver(updateSize);
+    setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isMounted) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const observer = new ResizeObserver(measureStage);
+    measureStage();
     observer.observe(stage);
     return () => observer.disconnect();
-  }, []);
+  }, [isMounted, measureStage]);
 
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
@@ -160,7 +179,9 @@ export default function ImageCropper({ imageSrc, onCropComplete, onCancel, forTh
   };
 
   const layout = getImageLayout();
-  return (
+  if (!isMounted) return null;
+
+  return createPortal((
     <div className={styles.cropperOverlay}>
       <div className={styles.cropperBox}>
         <div className={styles.cropperHeader}>
@@ -188,7 +209,10 @@ export default function ImageCropper({ imageSrc, onCropComplete, onCancel, forTh
               alt=""
               className={styles.sourceImage}
               draggable={false}
-              onLoad={(event) => setImageMeta({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+              onLoad={(event) => {
+                setImageMeta({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight });
+                measureStage();
+              }}
               style={layout ? {
                 width: `${layout.width}px`,
                 height: `${layout.height}px`,
@@ -218,5 +242,5 @@ export default function ImageCropper({ imageSrc, onCropComplete, onCancel, forTh
         onConfirm={() => setNoticeDialog(null)}
       />
     </div>
-  );
+  ), document.body);
 }
