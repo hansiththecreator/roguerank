@@ -11,6 +11,7 @@ import PollCreator from "./components/PollCreator";
 import { useCurrentUser } from "./hooks/useCurrentUser";
 import pageStyles from "./page.module.css";
 import { supabase } from "./lib/supabaseClient";
+import { applyCreatorProfilesToPolls } from "./lib/creatorProfiles";
 
 export default function Home() {
   const router = useRouter();
@@ -21,6 +22,19 @@ export default function Home() {
   const [showCreator, setShowCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("all");
+
+  useEffect(() => {
+    const refreshCreatorProfiles = async () => {
+      const [updatedSelected] = selectedPoll
+        ? await applyCreatorProfilesToPolls([selectedPoll])
+        : [];
+      const updatedPolls = await applyCreatorProfilesToPolls(polls);
+      setPolls(updatedPolls);
+      if (updatedSelected) setSelectedPoll(updatedSelected);
+    };
+    window.addEventListener("roguerank:profile-updated", refreshCreatorProfiles);
+    return () => window.removeEventListener("roguerank:profile-updated", refreshCreatorProfiles);
+  }, [polls, selectedPoll]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

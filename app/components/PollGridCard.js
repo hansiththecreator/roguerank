@@ -118,8 +118,7 @@ export default function PollGridCard({
   const [createdAtLabel, setCreatedAtLabel] = useState("Created recently");
   const [isMounted, setIsMounted] = useState(false);
   const liked = currentUser?.likes?.includes(poll.id);
-  const canManage =
-    currentUser?.id === poll.creatorId || (!poll.creatorId && currentUser?.username === poll.creator);
+  const canManage = Boolean(currentUser?.id && poll.creatorId && String(currentUser.id) === String(poll.creatorId));
   const voteCount =
     poll.total_votes ?? (poll.options || []).reduce((sum, option) => sum + (option.votes || 0), 0);
   const thumbnail = getPollThumbnail(poll);

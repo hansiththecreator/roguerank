@@ -5,7 +5,7 @@ export async function generateMetadata({ params }) {
   const poll = await getPollForMetadata(params?.id);
   const title = poll?.title || SITE_NAME;
   const description = poll
-    ? `${formatCount(poll.total_votes)} votes - Vote on ${SITE_NAME}`
+    ? `${poll.creatorHandle} · ${formatCount(poll.total_votes)} votes - Vote on ${SITE_NAME}`
     : `Vote on ${SITE_NAME}`;
   const url = `${getSiteUrl()}/polls/${encodeURIComponent(params?.id || "")}`;
   const image = `${getSiteUrl()}/api/polls/${encodeURIComponent(params?.id || "")}/opengraph-image`;

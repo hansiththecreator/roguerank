@@ -178,7 +178,7 @@ export default function CreatorProfilePage() {
   const creatorPolls = useMemo(
     () =>
       polls
-        .filter((poll) => String(poll.creatorId || poll.creator) === userId)
+        .filter((poll) => String(poll.creatorId) === userId)
         .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)),
     [polls, userId]
   );
@@ -186,7 +186,7 @@ export default function CreatorProfilePage() {
   const isOwnProfile = currentUser?.id && String(currentUser.id) === userId;
   const legacyCreatorName = isOwnProfile
     ? currentUser?.username || "Guest"
-    : creatorPolls[0]?.creator || "";
+    : creatorPolls[0]?.creatorUsername || "";
   const creatorUsername = userProfile?.username || (isOwnProfile ? currentUser?.username : "") || creatorPolls[0]?.creatorUsername || legacyCreatorName || "guest";
   const creatorName = userProfile?.name || (isOwnProfile ? currentUser?.name : "") || creatorPolls[0]?.creatorName || "";
   const showCreatorName = creatorName.trim() && creatorName.trim().toLowerCase() !== creatorUsername.trim().toLowerCase();
@@ -312,7 +312,7 @@ export default function CreatorProfilePage() {
       "",
       `Poll ID: ${poll.id}`,
       `Title: ${poll.title}`,
-      `Creator: ${poll.creator || "Unknown"}`,
+      `Creator: ${poll.creatorUsername || poll.creator || "Unknown"}`,
       pollUrl,
     ].join("\n");
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(REPORT_EMAIL)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

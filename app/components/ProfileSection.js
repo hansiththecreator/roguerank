@@ -15,7 +15,7 @@ const ProfileSection = ({ polls = [], currentUser, onDeletePoll, onEditPoll }) =
   }
 
   const userPolls = Array.isArray(polls)
-    ? polls.filter((p) => p?.creator?.id === currentUser?.id)
+    ? polls.filter((p) => p?.creatorId && String(p.creatorId) === String(currentUser.id))
     : [];
 
   return (

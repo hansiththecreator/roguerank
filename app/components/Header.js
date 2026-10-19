@@ -249,6 +249,7 @@ export default function Header({
         bio: data?.bio || cleanBio,
       });
       setCurrentUser(updatedUser);
+      window.dispatchEvent(new CustomEvent("roguerank:profile-updated", { detail: updatedUser }));
       setSelectedProfileFile(null);
       setSelectedFileSize("");
       setSavePulse(true);

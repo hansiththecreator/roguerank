@@ -282,6 +282,15 @@ export default function MultiPoll({
     };
   }, [fetchPollPage, setPolls]);
 
+  useEffect(() => {
+    const refreshCreatorProfiles = async () => {
+      const refreshed = await applyCreatorProfilesToPolls(polls);
+      setPolls(refreshed);
+    };
+    window.addEventListener("roguerank:profile-updated", refreshCreatorProfiles);
+    return () => window.removeEventListener("roguerank:profile-updated", refreshCreatorProfiles);
+  }, [polls, setPolls]);
+
   const loadMorePolls = useCallback(async () => {
     if (
       isFetchingMoreRef.current ||
@@ -370,13 +379,13 @@ export default function MultiPoll({
       if (!query) return true;
       if (filter === "polls") return poll.title?.toLowerCase().includes(query);
       if (filter === "creators") {
-        return [poll.creatorUsername, poll.creatorName, poll.creator]
+        return [getPollCreatorUsername(poll), poll.creatorName]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(query));
       }
       if (filter === "hashtags") return (poll.hashtags || []).some((tag) => tag.toLowerCase().includes(query));
       if (filter === "options") return (poll.options || []).some((o) => o.text?.toLowerCase().includes(query));
-      return [poll.title, poll.creatorUsername, poll.creatorName, poll.creator, ...(poll.hashtags || []), ...(poll.options || []).map((o) => o.text)]
+      return [poll.title, getPollCreatorUsername(poll), poll.creatorName, ...(poll.hashtags || []), ...(poll.options || []).map((o) => o.text)]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
@@ -540,7 +549,7 @@ export default function MultiPoll({
       `Optional description: ${optionalDescription}`,
       "",
       `Title: ${reportPoll.title}`,
-      `Creator: ${reportPoll.creator || "Unknown"}`,
+      `Creator: ${getPollCreatorUsername(reportPoll) || "Unknown"}`,
       pollUrl,
     ].join("\n");
 

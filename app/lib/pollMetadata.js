@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { headers } from "next/headers";
 import { supabase } from "./supabaseClient";
+import { applyCreatorProfilesToPolls } from "./creatorProfiles";
 
 export const SITE_NAME = "Rogue Rank";
 export const DEFAULT_IMAGE_PATH = "/RogueRank.jpeg";
@@ -58,6 +59,8 @@ function normalizePoll(row) {
   return {
     id: row.id,
     title: row.title || SITE_NAME,
+    creator: row.creator,
+    creatorId: row.creatorid,
     total_votes:
       row.total_votes ??
       options.reduce((sum, option) => sum + (option.votes || 0), 0),
@@ -73,7 +76,7 @@ export async function getPollForMetadata(id) {
 
   const { data, error } = await supabase
     .from("polls")
-    .select("id, title, total_votes, thumbnail, poll_options (id, text, image_url, rating, votes)")
+    .select("id, title, creator, creatorid, total_votes, thumbnail, poll_options (id, text, image_url, rating, votes)")
     .eq("id", id)
     .maybeSingle();
 
@@ -82,7 +85,13 @@ export async function getPollForMetadata(id) {
     return null;
   }
 
-  return normalizePoll(data);
+  const [poll] = await applyCreatorProfilesToPolls([normalizePoll(data)]);
+  if (poll) {
+    poll.creatorHandle = poll.creatorUsername
+      ? `@${String(poll.creatorUsername).replace(/^@/, "")}`
+      : "@guest";
+  }
+  return poll;
 }
 
 export function formatCount(num) {

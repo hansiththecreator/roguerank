@@ -345,7 +345,7 @@ export default function MyPollsPage() {
       `Optional description: ${optionalDescription}`,
       "",
       `Title: ${reportPoll.title}`,
-      `Creator: ${reportPoll.creator || "Unknown"}`,
+      `Creator: ${reportPoll.creatorUsername || reportPoll.creator || "Unknown"}`,
       pollUrl,
     ].join("\n");
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import styles from "./ProfilePage.module.css";
 import { supabase } from "../lib/supabaseClient";
 import { getUserProfile } from "../lib/pollEngagement";
+import { applyCreatorProfilesToPolls } from "../lib/creatorProfiles";
 
 export default function ProfilePage({ userId }) {
   const [user, setUser] = useState(null);
@@ -25,9 +26,9 @@ export default function ProfilePage({ userId }) {
         return;
       }
 
-      const targetPolls = (data || []).filter(
-        (poll) => String(poll.creatorid) === String(userId)
-      );
+      const targetPolls = await applyCreatorProfilesToPolls((data || [])
+        .filter((poll) => String(poll.creatorid) === String(userId))
+        .map((poll) => ({ ...poll, creatorId: poll.creatorid })));
 
       setUserPolls(targetPolls);
 
@@ -35,7 +36,7 @@ export default function ProfilePage({ userId }) {
       setUser({
         id: userId,
         name: profile.name || "",
-        username: profile.username || targetPolls[0]?.creator || "anonymous",
+        username: profile.username || targetPolls[0]?.creatorUsername || targetPolls[0]?.creator || "anonymous",
         pfp: profile.profile_pic || "/default-avatar.png",
       });
     }

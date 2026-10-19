@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 
 export function getPollCreatorUsername(poll) {
-  return poll?.creatorUsername || poll?.creatorProfile?.username || poll?.creator || "guest";
+  return poll?.creatorProfile?.username || poll?.creatorUsername || poll?.creator || "guest";
 }
 
 export function getPollCreatorName(poll) {
@@ -44,7 +44,7 @@ export async function applyCreatorProfilesToPolls(polls) {
 
     return {
       ...poll,
-      creatorUsername: profile.username || poll.creatorUsername || poll.creator,
+      creatorUsername: profile.username || poll.creator,
       creatorName: profile.name || poll.creatorName || "",
       creatorProfile: profile,
     };
